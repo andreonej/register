@@ -1,4 +1,4 @@
-export function MacroBar({ etiqueta, valor, maximo, color }) {
-  const porcentaje = maximo ? Math.min(100, (valor / maximo) * 100) : 0;
-  return <div className="macro-bar"><div><span>{etiqueta}</span><strong>{Math.round(valor)}g</strong></div><i><b style={{ width: `${porcentaje}%`, background: color }} /></i></div>;
+export function MacroRing({ etiqueta, valor, maximo, unidad = "g" }) {
+  const porcentaje = Math.min(100, maximo ? (valor / maximo) * 100 : 0);
+  return <div className="macro-ring"><i style={{ background: `conic-gradient(#171717 ${porcentaje}%, #e8e8e8 0)` }}><b>{Math.round(valor)}<small>{unidad}</small></b></i><span>{etiqueta}</span></div>;
 }

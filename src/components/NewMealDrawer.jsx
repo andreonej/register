@@ -6,6 +6,7 @@ export const EJEMPLO_REGISTRO = `{
   "nivel_confianza": "Alto"
 }`;
 
-export function NewMealDrawer({ abierto, texto, mensaje, guardando, onTexto, onCerrar, onGuardar, onAbrir }) {
-  return <div className="drawer-wrap"><div className="drawer">{abierto ? <><h2>Cargar nuevo registro</h2><textarea value={texto} onChange={(evento) => onTexto(evento.target.value)} placeholder={EJEMPLO_REGISTRO} rows="7" />{mensaje && <p className={`message ${mensaje.tipo}`}>{mensaje.texto}</p>}<div className="actions"><button onClick={onCerrar}>Cancelar</button><button className="primary" onClick={onGuardar} disabled={guardando || !texto.trim()}>{guardando ? "Guardando…" : "Guardar comida"}</button></div></> : <button className="add-button" onClick={onAbrir}>+ Cargar comida</button>}</div></div>;
+export function NewMealDrawer({ abierto, texto, mensaje, guardando, onTexto, onCerrar, onGuardar }) {
+  if (!abierto) return null;
+  return <div className="drawer-wrap"><div className="drawer"><h2>Cargar nuevo registro</h2><textarea value={texto} onChange={(evento) => onTexto(evento.target.value)} placeholder={EJEMPLO_REGISTRO} rows="7" />{mensaje && <p className={`message ${mensaje.tipo}`}>{mensaje.texto}</p>}<div className="actions"><button onClick={onCerrar}>Cancelar</button><button className="primary" onClick={onGuardar} disabled={guardando || !texto.trim()}>{guardando ? "Guardando…" : "Guardar comida"}</button></div></div></div>;
 }
