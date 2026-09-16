@@ -1,7 +1,50 @@
 import { formatoHora } from "../lib/date";
+import { MealIcon } from "./MealIcon";
 
 export function MealRow({ comida, abierta, confirmando, onToggle, onConfirmar, onCancelar, onBorrar }) {
   const ingredientes = comida.comida_ingredientes || [];
   const estimada = ingredientes.some((ingrediente) => ingrediente.supuesto);
-  return <><article className="meal-card"><div className="meal-head"><div className="meal-icon">♨</div><button className="meal-main" onClick={onToggle} aria-expanded={abierta}><span><strong>{comida.comida_nombre}</strong><small>{formatoHora(comida.fecha)} {estimada && "· estimado"}</small><em>P {Math.round(comida.proteinas_totales_g || 0)}g &nbsp; C {Math.round(comida.carbohidratos_totales_g || 0)}g &nbsp; G {Math.round(comida.grasas_totales_g || 0)}g</em></span></button><div className="meal-meta"><b>{Math.round(comida.calorias_totales)}<small> kcal</small></b><button className="delete-button" onClick={onConfirmar} aria-label={`Opciones para ${comida.comida_nombre}`} aria-expanded={confirmando}>•••</button></div></div>{abierta && <div className="ingredients">{ingredientes.map((ingrediente) => <div key={ingrediente.id}><span>{ingrediente.nombre}{ingrediente.supuesto && " *"}</span><span>{ingrediente.peso_estimado_g}g · {Math.round(ingrediente.calorias)} kcal</span></div>)}</div>}</article>{confirmando && <div className="delete-sheet-backdrop" onClick={onCancelar} role="presentation"><section className="delete-sheet" role="dialog" aria-modal="true" aria-label={`Opciones para ${comida.comida_nombre}`} onClick={(evento) => evento.stopPropagation()}><span className="sheet-handle" /><h2>¿Eliminar esta comida?</h2><p>Se eliminará “{comida.comida_nombre}” de tu registro.</p><button className="delete-action" onClick={onBorrar}>Eliminar comida</button><button className="cancel-action" onClick={onCancelar}>Cancelar</button></section></div>}</>;
+  return (
+    <>
+      <article className="meal-card">
+        <div className="meal-head">
+          <div className="meal-icon" title={comida.comida_nombre}>
+            <MealIcon name={comida.comida_nombre} size={22} color="var(--ink)" />
+          </div>
+          <button className="meal-main" onClick={onToggle} aria-expanded={abierta}>
+            <span>
+              <strong>{comida.comida_nombre}</strong>
+              <small>{formatoHora(comida.fecha)} {estimada && "· estimado"}</small>
+              <em>P {Math.round(comida.proteinas_totales_g || 0)}g &nbsp; C {Math.round(comida.carbohidratos_totales_g || 0)}g &nbsp; G {Math.round(comida.grasas_totales_g || 0)}g</em>
+            </span>
+          </button>
+          <div className="meal-meta">
+            <b>{Math.round(comida.calorias_totales)}<small> kcal</small></b>
+            <button className="delete-button" onClick={onConfirmar} aria-label={`Opciones para ${comida.comida_nombre}`} aria-expanded={confirmando}>•••</button>
+          </div>
+        </div>
+        {abierta && (
+          <div className="ingredients">
+            {ingredientes.map((ingrediente) => (
+              <div key={ingrediente.id}>
+                <span>{ingrediente.nombre}{ingrediente.supuesto && " *"}</span>
+                <span>{ingrediente.peso_estimado_g}g · {Math.round(ingrediente.calorias)} kcal</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </article>
+      {confirmando && (
+        <div className="delete-sheet-backdrop" onClick={onCancelar} role="presentation">
+          <section className="delete-sheet" role="dialog" aria-modal="true" aria-label={`Opciones para ${comida.comida_nombre}`} onClick={(evento) => evento.stopPropagation()}>
+            <span className="sheet-handle" />
+            <h2>¿Eliminar esta comida?</h2>
+            <p>Se eliminará “{comida.comida_nombre}” de tu registro.</p>
+            <button className="delete-action" onClick={onBorrar}>Eliminar comida</button>
+            <button className="cancel-action" onClick={onCancelar}>Cancelar</button>
+          </section>
+        </div>
+      )}
+    </>
+  );
 }
