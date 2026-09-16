@@ -137,6 +137,9 @@ export default function DiarioComidas() {
             </p>
             <h1>
               {vista === "diario" ? "Tu día" : vista === "historial" ? "Historial" : vista === "perfil" ? "Perfil" : "Health insights"}
+              {vista === "diario" && diaSeleccionado !== hoy && (
+                <button className="today-pill" onClick={() => setDiaSeleccionado(hoy)} aria-label="Volver a hoy">← Hoy</button>
+              )}
             </h1>
           </div>
           {vista === "historial" ? (
@@ -174,6 +177,7 @@ export default function DiarioComidas() {
               })}
             </div>
             <button onClick={() => setDiaSeleccionado(moverDia(diaSeleccionado, 1))} aria-label="Día siguiente">›</button>
+
           </section>
         )}
 
