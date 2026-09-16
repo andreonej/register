@@ -59,6 +59,7 @@ export function NewMealDrawer({
   const [pestana, setPestana] = useState("foto"); // "foto" | "json"
   const [imagenPreview, setImagenPreview] = useState(null);
   const [imagenDatos, setImagenDatos] = useState(null);
+  const [detallesAdicionales, setDetallesAdicionales] = useState("");
   const [analizando, setAnalizando] = useState(false);
   const [resultadoIa, setResultadoIa] = useState(null);
   const [errorLocal, setErrorLocal] = useState(null);
@@ -67,6 +68,26 @@ export function NewMealDrawer({
   const inputGaleriaRef = useRef(null);
 
   if (!abierto) return null;
+
+  const SUGERENCIAS = [
+    "Frito en aceite",
+    "Hecho al horno",
+    "A la plancha",
+    "Aceite de oliva (1 cda)",
+    "Sin aceite añadido",
+    "Con salsa / mayonesa",
+    "Con queso",
+    "Leche descremada"
+  ];
+
+  function agregarSugerencia(sug) {
+    setDetallesAdicionales((prev) => {
+      const limpia = prev.trim();
+      if (!limpia) return sug;
+      if (limpia.toLowerCase().includes(sug.toLowerCase())) return limpia;
+      return `${limpia}, ${sug}`;
+    });
+  }
 
   async function manejarArchivo(evento) {
     const archivo = evento.target.files?.[0];
@@ -89,7 +110,8 @@ export function NewMealDrawer({
     try {
       const resultado = await analizarFotoComida({
         base64Data: imagenDatos.base64Data,
-        mimeType: imagenDatos.mimeType
+        mimeType: imagenDatos.mimeType,
+        detallesAdicionales
       });
       setResultadoIa(resultado);
     } catch (err) {
@@ -110,6 +132,7 @@ export function NewMealDrawer({
     setImagenPreview(null);
     setImagenDatos(null);
     setResultadoIa(null);
+    setDetallesAdicionales("");
     setErrorLocal(null);
   }
 
@@ -207,6 +230,32 @@ export function NewMealDrawer({
                   </button>
                 </div>
 
+                {/* Campo de instrucciones e ingredientes ocultos */}
+                <div className="hints-card">
+                  <label className="hints-label">
+                    <span>💡 Instrucciones o ingredientes ocultos (opcional)</span>
+                  </label>
+                  <textarea
+                    className="hints-textarea"
+                    rows="2"
+                    placeholder="Ej: Milanesa frita en aceite de girasol; ensalada con 1 cda de aceite de oliva; al horno sin grasa..."
+                    value={detallesAdicionales}
+                    onChange={(e) => setDetallesAdicionales(e.target.value)}
+                  />
+                  <div className="chips-cloud">
+                    {SUGERENCIAS.map((sug) => (
+                      <button
+                        key={sug}
+                        type="button"
+                        className="chip-btn"
+                        onClick={() => agregarSugerencia(sug)}
+                      >
+                        ＋ {sug}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {!resultadoIa && !analizando && (
                   <button
                     type="button"
@@ -218,11 +267,22 @@ export function NewMealDrawer({
                   </button>
                 )}
 
+                {resultadoIa && !analizando && (
+                  <button
+                    type="button"
+                    className="secondary-reanalyze-btn"
+                    onClick={ejecutarAnalisis}
+                    disabled={!isGeminiConfigured}
+                  >
+                    🔄 Reanalizar plato con estas instrucciones
+                  </button>
+                )}
+
                 {analizando && (
                   <div className="analyzing-status">
                     <div className="ai-spinner" />
                     <p className="analyzing-title">Analizando tu comida con Gemini...</p>
-                    <small>Estimando alimentos, porciones y balance de macronutrientes</small>
+                    <small>Integrando ingredientes visibles, supuestos e instrucciones</small>
                   </div>
                 )}
 

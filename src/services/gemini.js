@@ -79,13 +79,19 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON válido (sin texto antes ni de
  * @param {string} params.mimeType - MIME type de la imagen (ej: image/jpeg, image/png)
  * @returns {Promise<Object>} Registro estructurado listo para la BD
  */
-export async function analizarFotoComida({ base64Data, mimeType = "image/jpeg" }) {
+export async function analizarFotoComida({ base64Data, mimeType = "image/jpeg", detallesAdicionales = "" }) {
   if (!isGeminiConfigured) {
     throw new Error("No se ha configurado la API Key de Gemini en el archivo .env (VITE_API_GEMINI).");
   }
 
   const fechaReferencia = obtenerFechaActualLocal();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+
+  let promptUsuario = `Analiza esta comida según tus instrucciones. Fecha actual de registro: "${fechaReferencia}".`;
+  if (detallesAdicionales && detallesAdicionales.trim()) {
+    promptUsuario += `\n\nDETALLES ADICIONALES E INGREDIENTES OCULTOS INDICADOS POR EL USUARIO:\n"${detallesAdicionales.trim()}"\nConsidera e integra explícitamente estos detalles (método de cocción, tipo o cantidad de aceite, aderezos, salsas, ingredientes no visibles) para calibrar con precisión los ingredientes, calorías y macronutrientes del plato.`;
+  }
+  promptUsuario += `\n\nGenera el JSON completo estructurado.`;
 
   const payload = {
     systemInstruction: {
@@ -101,7 +107,7 @@ export async function analizarFotoComida({ base64Data, mimeType = "image/jpeg" }
             }
           },
           {
-            text: `Analiza esta comida según tus instrucciones. Fecha actual de registro: "${fechaReferencia}". Genera el JSON completo.`
+            text: promptUsuario
           }
         ]
       }
