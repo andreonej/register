@@ -73,7 +73,7 @@ export function getNutrientGroup(nombreIngrediente = "") {
   if (/pollo|pechuga|\bpavo\b|pescado|salmon|atun|merluza|marisco|camaron|langostino|calamar|\bcarne\b|\bbife\b|asado|costilla|vacio|\blomo\b|matambre|entrecot|churrasco|milanesa|\bcerdo\b|\bvaca\b|ternera|\bhuevo|omelette|chorizo|salchich|jamon|fiambre|salame|salami/.test(n)) return "proteina_animal";
   if (/lenteja|garbanzo|\bporoto|frijol|\bhabas?\b|tofu|seitan|soja/.test(n)) return "proteina_vegetal";
   if (/\barroz\b|\bpanes?\b|\bpan\b|fideo|\bpasta\b|\bpapas?\b|\bpatatas?\b|quinoa|avena|harina|tallarin|gnocchi|noqui|raviol|batata|hojaldre|\bmasa\b/.test(n)) return "carbohidrato_almidon";
-  if (/manzana|banana|\bfruta\b|naranja|frutilla|mandarina|\buva\b|\bpera\b|\bkiwi\b|durazno|arandano|sandia|melon/.test(n)) return "fruta";
+  if (/manzana|banana|\bfruta\b|naranja|frutilla|mandarina|\buvas?\b|\bperas?\b|\bkiwis?\b|durazno|arandano|sandia|melon/.test(n)) return "fruta";
   if (/lechuga|rucula|\btomate\b|pepino|zanahoria|brocoli|espinaca|\bverdura|\bvegetal|\bpalta\b|acelga|\bapio\b|cebolla|pimiento|morron|chaucha|judia|zapallo|calabaza/.test(n)) return "vegetal_fibra";
   if (/aceitun|pepinillo|encurtido|mostaza/.test(n)) return "condimento_bajo_impacto";
   if (/\bhelad|chocolate|\bpostre|\bflan\b|budin|muffin|alfajor|galletita|galleta|\bcookie\b|\btorta\b|\bpastel\b|factura|dulce de leche|mermelada/.test(n)) return "dulce_ultraprocesado";
