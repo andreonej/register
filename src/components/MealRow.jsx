@@ -10,7 +10,7 @@ export function MealRow({ comida, abierta, confirmando, onToggle, onConfirmar, o
       <article className="meal-card">
         <div className="meal-head">
           <div className="meal-icon" title={comida.comida_nombre}>
-            <MealIcon name={comida.comida_nombre} size={22} color="var(--ink)" />
+            <MealIcon ingredientes={ingredientes} name={comida.comida_nombre} size={22} color="var(--ink)" />
           </div>
           <button className="meal-main" onClick={onToggle} aria-expanded={abierta}>
             <span>

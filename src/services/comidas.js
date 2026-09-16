@@ -1,5 +1,6 @@
 import { isSupabaseConfigured, supabaseApiUrl, supabaseHeaders } from "../config";
 import { eliminarFotoComida, subirFotoComida } from "./fotos";
+import { getNutrientGroup } from "../components/MealIcon";
 
 function validarConfiguracion() {
   if (!isSupabaseConfigured) throw new Error("Falta configurar Supabase. Revisá el archivo .env.");
@@ -55,7 +56,17 @@ export async function crearComida(registro, perfilId = null) {
       comida.foto_error = error.message;
     }
   }
-  const ingredientes = (registro.ingredientes || []).map((ingrediente) => ({ comida_id: comida.id, nombre: ingrediente.nombre, peso_estimado_g: ingrediente.peso_estimado_g ?? null, calorias: ingrediente.calorias ?? null, proteinas_g: ingrediente.proteinas_g ?? null, carbohidratos_g: ingrediente.carbohidratos_g ?? null, grasas_g: ingrediente.grasas_g ?? null, supuesto: Boolean(ingrediente.supuesto) }));
+  const ingredientes = (registro.ingredientes || []).map((ingrediente) => ({
+    comida_id: comida.id,
+    nombre: ingrediente.nombre,
+    peso_estimado_g: ingrediente.peso_estimado_g ?? null,
+    calorias: ingrediente.calorias ?? null,
+    proteinas_g: ingrediente.proteinas_g ?? null,
+    carbohidratos_g: ingrediente.carbohidratos_g ?? null,
+    grasas_g: ingrediente.grasas_g ?? null,
+    supuesto: Boolean(ingrediente.supuesto),
+    grupo_nutricional: ingrediente.grupo_nutricional || getNutrientGroup(ingrediente.nombre)
+  }));
   if (ingredientes.length) {
     const ingredientesRespuesta = await fetch(`${supabaseApiUrl}/comida_ingredientes`, { method: "POST", headers: supabaseHeaders, body: JSON.stringify(ingredientes) });
     if (!ingredientesRespuesta.ok) throw new Error("La comida se guardó, pero fallaron los ingredientes");
