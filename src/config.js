@@ -10,3 +10,8 @@ export const supabaseHeaders = {
 };
 
 export const supabaseApiUrl = supabaseUrl ? `${supabaseUrl}/rest/v1` : "";
+
+const rawGeminiKey = import.meta.env.VITE_API_GEMINI || "";
+export const geminiApiKey = rawGeminiKey.trim();
+export const isGeminiConfigured = Boolean(geminiApiKey);
+

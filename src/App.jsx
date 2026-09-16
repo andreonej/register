@@ -30,10 +30,10 @@ export default function DiarioComidas() {
     try { setComidas(await obtenerComidas()); } catch (err) { setError(err.message); } finally { setCargando(false); }
   }
   useEffect(() => { cargarComidas(); }, []);
-  async function guardarRegistro() {
+  async function guardarRegistro(registroObj) {
     setGuardando(true); setMensaje(null);
     try {
-      const registro = JSON.parse(textoJson);
+      const registro = (registroObj && typeof registroObj === "object") ? registroObj : JSON.parse(textoJson);
       await crearComida(registro);
       setMensaje({ tipo: "ok", texto: `Guardado: ${registro.comida_nombre}` });
       setTextoJson(""); setPanelAbierto(false); cargarComidas();
