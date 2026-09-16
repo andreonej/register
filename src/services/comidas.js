@@ -11,14 +11,26 @@ export async function obtenerComidas() {
   return respuesta.json();
 }
 
-export async function crearComida(registro) {
+export async function crearComida(registro, perfilId = null) {
   validarConfiguracion();
   const totales = registro.totales_plato || {};
   const fecha = `${registro.fecha.replace(" ", "T")}:00-03:00`;
+  const bodyPayload = {
+    comida_nombre: registro.comida_nombre,
+    fecha,
+    calorias_totales: totales.calorias ?? null,
+    proteinas_totales_g: totales.proteinas_g ?? null,
+    carbohidratos_totales_g: totales.carbohidratos_g ?? null,
+    grasas_totales_g: totales.grasas_g ?? null,
+    nivel_confianza: registro.nivel_confianza ?? null
+  };
+  if (perfilId || registro.perfil_id) {
+    bodyPayload.perfil_id = perfilId || registro.perfil_id;
+  }
   const respuesta = await fetch(`${supabaseApiUrl}/comidas`, {
     method: "POST",
     headers: { ...supabaseHeaders, Prefer: "return=representation" },
-    body: JSON.stringify({ comida_nombre: registro.comida_nombre, fecha, calorias_totales: totales.calorias ?? null, proteinas_totales_g: totales.proteinas_g ?? null, carbohidratos_totales_g: totales.carbohidratos_g ?? null, grasas_totales_g: totales.grasas_g ?? null, nivel_confianza: registro.nivel_confianza ?? null }),
+    body: JSON.stringify(bodyPayload),
   });
   if (!respuesta.ok) throw new Error("No se pudo guardar la comida");
   const [comida] = await respuesta.json();
