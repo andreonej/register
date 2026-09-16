@@ -79,8 +79,13 @@ export default function DiarioComidas() {
     setMensaje(null);
     try {
       const registro = (registroObj && typeof registroObj === "object") ? registroObj : JSON.parse(textoJson);
-      await crearComida(registro, perfil?.id);
-      setMensaje({ tipo: "ok", texto: `Guardado: ${registro.comida_nombre}` });
+      const comidaGuardada = await crearComida(registro, perfil?.id);
+      setMensaje({
+        tipo: comidaGuardada.foto_error ? "error" : "ok",
+        texto: comidaGuardada.foto_error
+          ? `La comida se guardó, pero no se pudo guardar su foto: ${comidaGuardada.foto_error}`
+          : `Guardado: ${registro.comida_nombre}`,
+      });
       setTextoJson("");
       setPanelAbierto(false);
       const comidasActualizadas = await obtenerComidas();
@@ -92,10 +97,10 @@ export default function DiarioComidas() {
     }
   }
 
-  async function borrarComida(id) {
+  async function borrarComida(comida) {
     try {
-      await eliminarComida(id);
-      setComidas((actuales) => actuales.filter((comida) => comida.id !== id));
+      await eliminarComida(comida);
+      setComidas((actuales) => actuales.filter((actual) => actual.id !== comida.id));
       setConfirmandoId(null);
     } catch (err) {
       setError(err.message);
@@ -123,7 +128,7 @@ export default function DiarioComidas() {
       onToggle={() => setExpandido(expandido === comida.id ? null : comida.id)}
       onConfirmar={() => setConfirmandoId(comida.id)}
       onCancelar={() => setConfirmandoId(null)}
-      onBorrar={() => borrarComida(comida.id)}
+      onBorrar={() => borrarComida(comida)}
     />
   );
 

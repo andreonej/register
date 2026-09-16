@@ -26,6 +26,7 @@
 .photo-active-view{display:flex;flex-direction:column;gap:12px}
 .photo-thumbnail-box{position:relative;width:100%;max-height:220px;border-radius:14px;overflow:hidden;border:1px solid var(--border);background:#171717}
 .photo-thumbnail{width:100%;max-height:220px;object-fit:cover;display:block}
+.meal-photo{display:block;width:100%;max-height:260px;object-fit:cover;border-radius:12px;margin:0 0 12px}
 .photo-retake-btn{position:absolute;top:8px;right:8px;background:#000000b0;color:#fff;border:0;border-radius:20px;padding:5px 10px;font-size:11px;cursor:pointer;backdrop-filter:blur(4px)}
 .analyze-btn{width:100%;min-height:46px;font-size:14px;font-weight:600;border-radius:12px;background:linear-gradient(135deg,#171717 0%,#2c2c2c 100%);color:#fff;border:0;cursor:pointer;box-shadow:0 4px 14px #00000020}
 .analyzing-status{text-align:center;padding:22px 14px;background:#f9f9f8;border-radius:14px;border:1px solid var(--border)}

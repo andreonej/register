@@ -138,7 +138,7 @@ export function NewMealDrawer({
 
   function guardarResultadoIa() {
     if (resultadoIa) {
-      onGuardar(resultadoIa);
+      onGuardar({ ...resultadoIa, foto: imagenDatos ? { base64Data: imagenDatos.base64Data, mimeType: imagenDatos.mimeType } : null });
     }
   }
 

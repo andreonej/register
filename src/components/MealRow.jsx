@@ -1,5 +1,6 @@
 import { formatoHora } from "../lib/date";
 import { MealIcon } from "./MealIcon";
+import { obtenerUrlFotoComida } from "../services/fotos";
 
 export function MealRow({ comida, abierta, confirmando, onToggle, onConfirmar, onCancelar, onBorrar }) {
   const ingredientes = comida.comida_ingredientes || [];
@@ -25,6 +26,14 @@ export function MealRow({ comida, abierta, confirmando, onToggle, onConfirmar, o
         </div>
         {abierta && (
           <div className="ingredients">
+            {comida.foto_path && (
+              <img
+                className="meal-photo"
+                src={obtenerUrlFotoComida(comida.foto_path)}
+                alt={`Foto de ${comida.comida_nombre}`}
+                loading="lazy"
+              />
+            )}
             {ingredientes.map((ingrediente) => (
               <div key={ingrediente.id}>
                 <span>{ingrediente.nombre}{ingrediente.supuesto && " *"}</span>
