@@ -4,6 +4,13 @@ import React from "react";
 export function getMealCategory(nombre = "") {
   const n = nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+  // Categorías específicas primero: evitan que, por ejemplo, un helado de
+  // chocolate se represente como panadería o que una mezcla de semillas caiga
+  // en una categoría demasiado genérica.
+  if (/helado|ice[ -]?cream|gelato|sorbet|sorbete|palito helado/.test(n)) return "iceCream";
+  if (/semilla|chia|lino|linaza|sesamo|girasol|calabaza|pepita|poppy/.test(n)) return "seeds";
+  if (/nuez|almendra|mani|cacahuate|avellana|castana|pistacho|pecan|macadamia|caju|anacardo/.test(n)) return "nuts";
+
   if (/hamburguesa|burger|cheeseburger|medallon/.test(n)) return "burger";
   if (/sandwich|sanduich|tostado|lomito|wrap|bagel|torta de/.test(n)) return "sandwich";
   if (/fideo|pasta|tallarin|espagueti|spaghetti|ravioli|raviol|gnocchi|noqui|lasagna|lasana|canelon|fetuccin|penne|macarron/.test(n)) return "pasta";
@@ -160,6 +167,31 @@ export function MealIcon({ name = "", size = 22, color = "currentColor" }) {
         <svg {...props}>
           <path d="M3 16A9 9 0 0 1 21 16H3z" />
           <path d="M6 13c1.5-1 3-1 4.5 0s3 1 4.5 0 3-1 4.5 0" />
+        </svg>
+      );
+    case "iceCream":
+      return (
+        <svg {...props}>
+          <path d="M7 10a5 5 0 1 1 10 0c0 2-1.2 3.4-2.7 4.1H9.7C8.2 13.4 7 12 7 10z" />
+          <path d="m10 14 2 8 2-8" />
+          <path d="M9 7.5c1 .7 2 .7 3 0s2-.7 3 0" />
+        </svg>
+      );
+    case "seeds":
+      return (
+        <svg {...props}>
+          <ellipse cx="8" cy="8" rx="2.5" ry="4" transform="rotate(-35 8 8)" />
+          <ellipse cx="16" cy="8" rx="2.5" ry="4" transform="rotate(35 16 8)" />
+          <ellipse cx="8" cy="16" rx="2.5" ry="4" transform="rotate(35 8 16)" />
+          <ellipse cx="16" cy="16" rx="2.5" ry="4" transform="rotate(-35 16 16)" />
+        </svg>
+      );
+    case "nuts":
+      return (
+        <svg {...props}>
+          <path d="M12 3c-4.5 0-7 3.5-7 8 0 5.5 3 10 7 10s7-4.5 7-10c0-4.5-2.5-8-7-8z" />
+          <path d="M9 5c1.5 2 1.5 4 0 6s-1.5 4 0 7" />
+          <path d="M15 5c-1.5 2-1.5 4 0 6s1.5 4 0 7" />
         </svg>
       );
     case "bakery":
