@@ -13,6 +13,11 @@ import {
   eliminarRegistroPeso,
   asociarComidasHuerfanas
 } from "../services/perfil";
+import {
+  MODELOS_GEMINI,
+  obtenerModeloSeleccionado,
+  guardarModeloSeleccionado
+} from "../services/gemini";
 
 export function ProfileView({
   perfil,
@@ -40,6 +45,9 @@ export function ProfileView({
   const [guardandoPeso, setGuardandoPeso] = useState(false);
   const [mensaje, setMensaje] = useState(null);
   const [mostrarSql, setMostrarSql] = useState(false);
+  const [modeloActivo, setModeloActivo] = useState(obtenerModeloSeleccionado);
+  const [mostrarCustomModel, setMostrarCustomModel] = useState(false);
+  const [customModelInput, setCustomModelInput] = useState("");
 
   const pesoActual = useMemo(() => {
     return historialPesos[0]?.peso_kg || perfil.peso_actual || 75;
@@ -131,6 +139,21 @@ export function ProfileView({
     } catch (err) {
       setMensaje({ tipo: "error", texto: err.message });
     }
+  }
+
+  function manejarCambioModelo(nuevoModelo) {
+    setModeloActivo(nuevoModelo);
+    guardarModeloSeleccionado(nuevoModelo);
+    setMensaje({ tipo: "ok", texto: `Modelo de IA cambiado a "${nuevoModelo}". Se usará en tus próximos registros.` });
+  }
+
+  function manejarGuardarCustomModel(e) {
+    e.preventDefault();
+    if (!customModelInput.trim()) return;
+    const modeloLimpio = customModelInput.trim().toLowerCase();
+    manejarCambioModelo(modeloLimpio);
+    setMostrarCustomModel(false);
+    setCustomModelInput("");
   }
 
   return (
@@ -443,6 +466,82 @@ export function ProfileView({
             {guardandoPerfil ? "Guardando cambios…" : "Guardar Perfil y Recalcular Metas"}
           </button>
         </form>
+      </section>
+
+      {/* Configuración de Inteligencia Artificial / Modelos Gemini */}
+      <section className="profile-ai-card">
+        <div className="card-header-styled">
+          <div>
+            <span className="eyebrow">Inteligencia Artificial</span>
+            <h3>Motor de Reconocimiento Gemini</h3>
+          </div>
+          <span className="formula-badge ai-badge">Google AI</span>
+        </div>
+        <p className="tools-desc">
+          Selecciona el modelo de Gemini que analizará tus comidas. Si en algún momento una versión está saturada o con alta demanda, puedes cambiarla aquí o directamente al tomar la foto.
+        </p>
+
+        <div className="ai-models-list">
+          {MODELOS_GEMINI.map((m) => {
+            const seleccionado = modeloActivo === m.id;
+            return (
+              <div
+                key={m.id}
+                className={`ai-model-card ${seleccionado ? "selected" : ""}`}
+                onClick={() => manejarCambioModelo(m.id)}
+              >
+                <div className="ai-model-head">
+                  <div className="ai-model-info">
+                    <b>{m.nombre}</b>
+                    <span className="ai-tag">{m.etiqueta}</span>
+                  </div>
+                  <span className={`ai-radio ${seleccionado ? "active" : ""}`}>
+                    {seleccionado ? "✓ Activo" : "Seleccionar"}
+                  </span>
+                </div>
+                <small className="ai-model-desc">{m.descripcion}</small>
+                <code className="ai-model-id">{m.id}</code>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Opción de modelo personalizado */}
+        <div className="custom-model-box">
+          <button
+            type="button"
+            className="secondary-pill-btn"
+            onClick={() => setMostrarCustomModel(!mostrarCustomModel)}
+          >
+            {mostrarCustomModel ? "✕ Cancelar" : "✏️ Usar ID de modelo personalizado"}
+          </button>
+
+          {mostrarCustomModel && (
+            <form onSubmit={manejarGuardarCustomModel} className="custom-model-form">
+              <input
+                type="text"
+                placeholder="ej: gemini-3.7-flash, gemini-3.6-flash..."
+                value={customModelInput}
+                onChange={(e) => setCustomModelInput(e.target.value)}
+                required
+              />
+              <button
+                type="submit"
+                className="primary"
+                disabled={!customModelInput.trim()}
+              >
+                Activar modelo
+              </button>
+            </form>
+          )}
+
+          {!MODELOS_GEMINI.some((m) => m.id === modeloActivo) && (
+            <div className="custom-active-notice">
+              <small>Modelo personalizado activo actualmente:</small>
+              <code>{modeloActivo}</code>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Sincronización y Mantenimiento */}

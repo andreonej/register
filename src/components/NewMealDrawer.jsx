@@ -1,5 +1,10 @@
 import { useState, useRef } from "react";
-import { analizarFotoComida } from "../services/gemini";
+import {
+  analizarFotoComida,
+  MODELOS_GEMINI,
+  obtenerModeloSeleccionado,
+  guardarModeloSeleccionado
+} from "../services/gemini";
 import { isGeminiConfigured } from "../config";
 
 export const EJEMPLO_REGISTRO = `{
@@ -63,9 +68,15 @@ export function NewMealDrawer({
   const [analizando, setAnalizando] = useState(false);
   const [resultadoIa, setResultadoIa] = useState(null);
   const [errorLocal, setErrorLocal] = useState(null);
+  const [modeloActual, setModeloActual] = useState(obtenerModeloSeleccionado);
 
   const inputCamaraRef = useRef(null);
   const inputGaleriaRef = useRef(null);
+
+  function manejarCambioModelo(nuevoModelo) {
+    setModeloActual(nuevoModelo);
+    guardarModeloSeleccionado(nuevoModelo);
+  }
 
   if (!abierto) return null;
 
@@ -103,15 +114,20 @@ export function NewMealDrawer({
     }
   }
 
-  async function ejecutarAnalisis() {
+  async function ejecutarAnalisis(modeloForzado = null) {
     if (!imagenDatos) return;
+    const modeloUsar = modeloForzado || modeloActual;
+    if (modeloForzado) {
+      manejarCambioModelo(modeloForzado);
+    }
     setAnalizando(true);
     setErrorLocal(null);
     try {
       const resultado = await analizarFotoComida({
         base64Data: imagenDatos.base64Data,
         mimeType: imagenDatos.mimeType,
-        detallesAdicionales
+        detallesAdicionales,
+        modelo: modeloUsar
       });
       setResultadoIa(resultado);
     } catch (err) {
@@ -193,6 +209,24 @@ export function NewMealDrawer({
               </div>
             )}
 
+            {/* Selector rápido de modelo activo */}
+            <div className="drawer-model-bar">
+              <span className="drawer-model-tag">🤖 Modelo Gemini:</span>
+              <select
+                className="drawer-model-select"
+                value={modeloActual}
+                onChange={(e) => manejarCambioModelo(e.target.value)}
+                disabled={analizando}
+                title="Seleccionar modelo de Gemini"
+              >
+                {MODELOS_GEMINI.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.nombre} · {m.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {!imagenPreview ? (
               <div className="photo-picker-zone">
                 <div className="photo-picker-icon">🍲</div>
@@ -260,10 +294,10 @@ export function NewMealDrawer({
                   <button
                     type="button"
                     className="primary analyze-btn"
-                    onClick={ejecutarAnalisis}
+                    onClick={() => ejecutarAnalisis()}
                     disabled={!isGeminiConfigured}
                   >
-                    ✨ Analizar plato con IA
+                    ✨ Analizar plato con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}
                   </button>
                 )}
 
@@ -271,7 +305,7 @@ export function NewMealDrawer({
                   <button
                     type="button"
                     className="secondary-reanalyze-btn"
-                    onClick={ejecutarAnalisis}
+                    onClick={() => ejecutarAnalisis()}
                     disabled={!isGeminiConfigured}
                   >
                     🔄 Reanalizar plato con estas instrucciones
@@ -281,7 +315,7 @@ export function NewMealDrawer({
                 {analizando && (
                   <div className="analyzing-status">
                     <div className="ai-spinner" />
-                    <p className="analyzing-title">Analizando tu comida con Gemini...</p>
+                    <p className="analyzing-title">Analizando con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}...</p>
                     <small>Integrando ingredientes visibles, supuestos e instrucciones</small>
                   </div>
                 )}
@@ -359,7 +393,46 @@ export function NewMealDrawer({
               </div>
             )}
 
-            {errorLocal && <p className="message error">{errorLocal}</p>}
+            {errorLocal && (
+              <div className="error-recovery-box">
+                <p className="message error">{errorLocal}</p>
+                <div className="error-switch-options">
+                  <small>¿Deseas probar otro modelo con alta disponibilidad?</small>
+                  <div className="error-quick-chips">
+                    {modeloActual !== "gemini-2.0-flash" && (
+                      <button
+                        type="button"
+                        className="error-switch-chip"
+                        onClick={() => ejecutarAnalisis("gemini-2.0-flash")}
+                        disabled={analizando}
+                      >
+                        ⚡ Probar Gemini 2.0 Flash
+                      </button>
+                    )}
+                    {modeloActual !== "gemini-1.5-flash" && (
+                      <button
+                        type="button"
+                        className="error-switch-chip"
+                        onClick={() => ejecutarAnalisis("gemini-1.5-flash")}
+                        disabled={analizando}
+                      >
+                        🛡️ Probar Gemini 1.5 Flash
+                      </button>
+                    )}
+                    {modeloActual !== "gemini-3.7-flash" && modeloActual !== "gemini-3.6-flash" && (
+                      <button
+                        type="button"
+                        className="error-switch-chip"
+                        onClick={() => ejecutarAnalisis("gemini-3.7-flash")}
+                        disabled={analizando}
+                      >
+                        🚀 Probar Gemini 3.7 Flash
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -72,20 +72,58 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON válido (sin texto antes ni de
 }
 `;
 
+export const MODELOS_GEMINI = [
+  { id: "gemini-3.7-flash", nombre: "Gemini 3.7 Flash", etiqueta: "Última generación", descripcion: "Modelo más reciente y avanzado con alta velocidad y visión" },
+  { id: "gemini-3.6-flash", nombre: "Gemini 3.6 Flash", etiqueta: "Serie 3 Flash", descripcion: "Excelente equilibrio de inteligencia multimodal y rapidez" },
+  { id: "gemini-3.5-flash", nombre: "Gemini 3.5 Flash", etiqueta: "Serie 3 Flash", descripcion: "Gran fluidez y precisión para análisis nutricional" },
+  { id: "gemini-2.5-flash", nombre: "Gemini 2.5 Flash", etiqueta: "Estándar 2.5", descripcion: "Muy preciso en desglose visual de ingredientes y porciones" },
+  { id: "gemini-2.0-flash", nombre: "Gemini 2.0 Flash", etiqueta: "Rápido y Estable", descripcion: "Excelente alternativa cuando hay alto tráfico en series 3 o 2.5" },
+  { id: "gemini-2.0-flash-lite", nombre: "Gemini 2.0 Flash Lite", etiqueta: "Alta disponibilidad", descripcion: "Ultra ligero y diseñado para bajo consumo de cuota" },
+  { id: "gemini-1.5-flash", nombre: "Gemini 1.5 Flash", etiqueta: "Clásico confiable", descripcion: "Cuotas muy amplias y excelente estabilidad" },
+  { id: "gemini-2.5-pro", nombre: "Gemini 2.5 Pro", etiqueta: "Máxima precisión", descripcion: "Análisis profundo para platos complejos con múltiples salsas" },
+  { id: "gemini-1.5-pro", nombre: "Gemini 1.5 Pro", etiqueta: "Razonamiento Pro", descripcion: "Modelo de razonamiento profundo clásico" }
+];
+
+export const MODELO_PREDETERMINADO = "gemini-2.5-flash";
+
+export function obtenerModeloSeleccionado() {
+  try {
+    return localStorage.getItem("gemini_modelo_activo") || MODELO_PREDETERMINADO;
+  } catch {
+    return MODELO_PREDETERMINADO;
+  }
+}
+
+export function guardarModeloSeleccionado(modeloId) {
+  try {
+    localStorage.setItem("gemini_modelo_activo", modeloId);
+  } catch (e) {
+    console.error("Error al guardar modelo en localStorage", e);
+  }
+}
+
 /**
  * Analiza una imagen de comida usando la API de Gemini.
  * @param {Object} params
  * @param {string} params.base64Data - Imagen en base64 (sin el prefijo data:image/...)
  * @param {string} params.mimeType - MIME type de la imagen (ej: image/jpeg, image/png)
+ * @param {string} [params.detallesAdicionales] - Instrucciones o supuestos adicionales
+ * @param {string} [params.modelo] - Identificador del modelo Gemini a utilizar
  * @returns {Promise<Object>} Registro estructurado listo para la BD
  */
-export async function analizarFotoComida({ base64Data, mimeType = "image/jpeg", detallesAdicionales = "" }) {
+export async function analizarFotoComida({
+  base64Data,
+  mimeType = "image/jpeg",
+  detallesAdicionales = "",
+  modelo = null
+}) {
   if (!isGeminiConfigured) {
     throw new Error("No se ha configurado la API Key de Gemini en el archivo .env (VITE_API_GEMINI).");
   }
 
+  const modeloActivo = modelo || obtenerModeloSeleccionado();
   const fechaReferencia = obtenerFechaActualLocal();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloActivo}:generateContent?key=${geminiApiKey}`;
 
   let promptUsuario = `Analiza esta comida según tus instrucciones. Fecha actual de registro: "${fechaReferencia}".`;
   if (detallesAdicionales && detallesAdicionales.trim()) {
@@ -137,6 +175,15 @@ export async function analizarFotoComida({ base64Data, mimeType = "image/jpeg", 
     } catch {
       // Usar errorMsg por defecto
     }
+
+    if (response.status === 429 || errorMsg.toLowerCase().includes("quota") || errorMsg.toLowerCase().includes("resource_exhausted")) {
+      throw new Error(`El modelo "${modeloActivo}" está saturado o excedió la cuota de peticiones por minuto. Prueba cambiar a otro modelo (ej. Gemini 2.0 Flash o 1.5 Flash) en el selector.`);
+    } else if (response.status === 503 || errorMsg.toLowerCase().includes("overloaded")) {
+      throw new Error(`El modelo "${modeloActivo}" está sobrecargado temporalmente en Google. Por favor selecciona otro modelo para analizar de inmediato.`);
+    } else if (response.status === 404 || errorMsg.toLowerCase().includes("not found")) {
+      throw new Error(`El modelo "${modeloActivo}" no se encuentra disponible con tu API Key. Por favor selecciona otro modelo como Gemini 2.0 Flash o Gemini 2.5 Flash.`);
+    }
+
     throw new Error(errorMsg);
   }
 

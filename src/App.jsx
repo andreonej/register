@@ -269,12 +269,6 @@ export default function DiarioComidas() {
         >
           <b>⌁</b>Progreso
         </button>
-        <button
-          className={vista === "perfil" ? "active" : ""}
-          onClick={() => setVista("perfil")}
-        >
-          <b>👤</b>Perfil
-        </button>
       </nav>
 
       <NewMealDrawer
