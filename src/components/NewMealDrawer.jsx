@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   analizarFotoComida,
   MODELOS_GEMINI,
@@ -57,6 +57,8 @@ export function NewMealDrawer({
   texto,
   mensaje,
   guardando,
+  modeloActivo: modeloProp,
+  onCambiarModelo,
   onTexto,
   onCerrar,
   onGuardar
@@ -68,14 +70,24 @@ export function NewMealDrawer({
   const [analizando, setAnalizando] = useState(false);
   const [resultadoIa, setResultadoIa] = useState(null);
   const [errorLocal, setErrorLocal] = useState(null);
-  const [modeloActual, setModeloActual] = useState(obtenerModeloSeleccionado);
+  const [modeloActual, setModeloActual] = useState(modeloProp || obtenerModeloSeleccionado);
 
   const inputCamaraRef = useRef(null);
   const inputGaleriaRef = useRef(null);
 
+  // Sincronizar con el modelo activo global cada vez que se abre el drawer o cambia la prop
+  useEffect(() => {
+    if (abierto) {
+      setModeloActual(modeloProp || obtenerModeloSeleccionado());
+    }
+  }, [abierto, modeloProp]);
+
   function manejarCambioModelo(nuevoModelo) {
     setModeloActual(nuevoModelo);
     guardarModeloSeleccionado(nuevoModelo);
+    if (onCambiarModelo) {
+      onCambiarModelo(nuevoModelo);
+    }
   }
 
   if (!abierto) return null;

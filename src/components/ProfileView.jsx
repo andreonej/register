@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   FACTORES_ACTIVIDAD,
   OBJETIVOS_CALORICOS,
@@ -22,6 +22,8 @@ import {
 export function ProfileView({
   perfil,
   historialPesos,
+  modeloActivo: modeloProp,
+  onCambiarModelo,
   onPerfilActualizado,
   onPesosActualizados,
   onVolver
@@ -45,9 +47,15 @@ export function ProfileView({
   const [guardandoPeso, setGuardandoPeso] = useState(false);
   const [mensaje, setMensaje] = useState(null);
   const [mostrarSql, setMostrarSql] = useState(false);
-  const [modeloActivo, setModeloActivo] = useState(obtenerModeloSeleccionado);
+  const [modeloActivo, setModeloActivo] = useState(modeloProp || obtenerModeloSeleccionado);
   const [mostrarCustomModel, setMostrarCustomModel] = useState(false);
   const [customModelInput, setCustomModelInput] = useState("");
+
+  useEffect(() => {
+    if (modeloProp) {
+      setModeloActivo(modeloProp);
+    }
+  }, [modeloProp]);
 
   const pesoActual = useMemo(() => {
     return historialPesos[0]?.peso_kg || perfil.peso_actual || 75;
@@ -144,6 +152,9 @@ export function ProfileView({
   function manejarCambioModelo(nuevoModelo) {
     setModeloActivo(nuevoModelo);
     guardarModeloSeleccionado(nuevoModelo);
+    if (onCambiarModelo) {
+      onCambiarModelo(nuevoModelo);
+    }
     setMensaje({ tipo: "ok", texto: `Modelo de IA cambiado a "${nuevoModelo}". Se usará en tus próximos registros.` });
   }
 

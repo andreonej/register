@@ -8,6 +8,7 @@ import { agruparPorDia, fechaLocalDia, formatoDia } from "./lib/date";
 import { calcularObjetivosNutricionales } from "./lib/metabolismo";
 import { crearComida, eliminarComida, obtenerComidas } from "./services/comidas";
 import { obtenerPerfilActivo, obtenerHistorialPesos } from "./services/perfil";
+import { obtenerModeloSeleccionado, guardarModeloSeleccionado } from "./services/gemini";
 import "./App.css";
 
 const diaIso = (fecha) => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
@@ -22,6 +23,7 @@ export default function DiarioComidas() {
   const [error, setError] = useState(null);
   const [vista, setVista] = useState("diario"); // "diario" | "panel" | "historial" | "perfil"
   const [diaSeleccionado, setDiaSeleccionado] = useState(() => fechaLocalDia(new Date()));
+  const [modeloGemini, setModeloGemini] = useState(obtenerModeloSeleccionado);
   const [panelAbierto, setPanelAbierto] = useState(false);
   const [textoJson, setTextoJson] = useState("");
   const [mensaje, setMensaje] = useState(null);
@@ -132,6 +134,11 @@ export default function DiarioComidas() {
     />
   );
 
+  function cambiarModelo(nuevoModelo) {
+    setModeloGemini(nuevoModelo);
+    guardarModeloSeleccionado(nuevoModelo);
+  }
+
   return (
     <main className="app">
       <div className="content">
@@ -194,6 +201,8 @@ export default function DiarioComidas() {
           <ProfileView
             perfil={perfil || {}}
             historialPesos={historialPesos}
+            modeloActivo={modeloGemini}
+            onCambiarModelo={cambiarModelo}
             onPerfilActualizado={(p) => setPerfil(p)}
             onPesosActualizados={recargarPesos}
             onVolver={() => setVista("diario")}
@@ -276,6 +285,8 @@ export default function DiarioComidas() {
         texto={textoJson}
         mensaje={mensaje}
         guardando={guardando}
+        modeloActivo={modeloGemini}
+        onCambiarModelo={cambiarModelo}
         onTexto={setTextoJson}
         onCerrar={() => setPanelAbierto(false)}
         onGuardar={guardarRegistro}
