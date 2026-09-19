@@ -208,7 +208,13 @@ export default function DiarioComidas() {
             onVolver={() => setVista("diario")}
           />
         ) : vista === "panel" ? (
-          <AnalyticsPanel comidas={comidas} objetivos={objetivos} onVerHistorial={() => setVista("historial")} />
+          <AnalyticsPanel
+            comidas={comidas}
+            objetivos={objetivos}
+            perfil={perfil || {}}
+            historialPesos={historialPesos}
+            onVerHistorial={() => setVista("historial")}
+          />
         ) : vista === "historial" ? (
           <section className="history-list">
             {gruposHistoricos.length ? (

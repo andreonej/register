@@ -480,3 +480,630 @@
   font-weight: 600;
   color: #1e429f;
 }
+
+/* ==========================================================
+   REDISEÑO DE SECCIÓN DE PROGRESO (INSIGHTS & INTELLIGENCE)
+   ========================================================== */
+.insights-redesign {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 20px;
+}
+
+.insights-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.insights-header h2 {
+  font: 600 24px Fraunces, serif;
+  margin: 2px 0 0;
+  color: var(--ink);
+}
+
+.goal-pill-tag {
+  background: var(--soft);
+  color: var(--ink);
+  font: 600 11px Inter, sans-serif;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+/* 1. Tarjeta Héroe Adaptativa */
+.hero-metric-card {
+  border-radius: 18px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.hero-theme-bajar {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 70%, #ecfdf5 100%);
+  border-color: #bbf7d0;
+}
+
+.hero-theme-subir {
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 70%, #f0f9ff 100%);
+  border-color: #bfdbfe;
+}
+
+.hero-theme-mantener {
+  background: linear-gradient(135deg, #fafaf9 0%, #ffffff 70%, #f5f5f4 100%);
+  border-color: #e7e5e4;
+}
+
+.hero-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.hero-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 3px;
+}
+
+.hero-main-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.hero-main-stat strong {
+  font: 600 32px Fraunces, serif;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+}
+
+.hero-main-stat small {
+  font: 500 13px Inter, sans-serif;
+  color: var(--muted);
+}
+
+.hero-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 14px;
+  white-space: nowrap;
+}
+
+.badge-exito {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge-aviso {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge-alerta {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge-neutro {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.hero-sub {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #525252;
+  line-height: 1.4;
+}
+
+.hero-footer-insight {
+  font-size: 11px;
+  font-weight: 500;
+  color: #374151;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 10px;
+  padding: 7px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.hero-warning-box {
+  margin-top: 10px;
+  font-size: 11px;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 8px 10px;
+  line-height: 1.35;
+}
+
+/* 2. Gráfico Semanal & Bandas */
+.chart-card {
+  padding: 18px;
+}
+
+.chart-legend-mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.legend-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.legend-dot.green::before {
+  background: #10b981;
+}
+
+.legend-dot.orange::before {
+  background: #f59e0b;
+}
+
+.legend-dot.purple::before {
+  background: #818cf8;
+}
+
+.weekly-chart-box {
+  margin: 14px -6px 8px;
+}
+
+.chart-footer-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+
+.meta-stat {
+  text-align: center;
+}
+
+.meta-stat small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.meta-stat b {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.meta-stat b small {
+  display: inline;
+  font-size: 10px;
+  font-weight: 400;
+}
+
+/* Tooltip */
+.custom-chart-tooltip {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  font-family: Inter, sans-serif;
+}
+
+.custom-chart-tooltip b {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.tooltip-cal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tooltip-cal strong {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.tooltip-tag {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+}
+
+.status-en_meta {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-exceso {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status-piso_bajo {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.status-corto {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.tooltip-macros {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  color: #555;
+  border-top: 1px solid #f0f0ee;
+  padding-top: 4px;
+  margin-top: 4px;
+}
+
+/* 3. Cierre de Brecha ("Comé esto") */
+.gap-closer-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfbf9 100%);
+  border-left: 4px solid #10b981;
+}
+
+.badge-recommend {
+  font-size: 10px;
+  font-weight: 600;
+  color: #059669;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.gap-missing {
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid #bbf7d0;
+}
+
+.gap-desc {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 2px 0 12px;
+  line-height: 1.4;
+}
+
+.suggestions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suggestion-pill-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.sug-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.sug-text strong {
+  display: block;
+  font-size: 12px;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.sug-text span {
+  display: block;
+  font-size: 11px;
+  color: #15803d;
+  font-weight: 500;
+}
+
+.sug-text small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+/* 4. Balance de Macronutrientes */
+.macro-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.macro-bar-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.featured-macro {
+  background: #f8fafc;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.macro-bar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.macro-bar-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.macro-bar-values strong {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.macro-bar-values small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.macro-pct {
+  margin-left: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.macro-track {
+  width: 100%;
+  height: 6px;
+  background: #eeeee9;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.macro-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+/* 5. ADN Alimentario & Diversidad */
+.dna-ingredients-card {
+  background: #ffffff;
+}
+
+.diversity-badge {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.dna-desc {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 2px 0 12px;
+}
+
+.ingredients-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ingredient-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f6f6f4;
+  border: 1px solid #e7e7e4;
+  border-radius: 14px;
+  padding: 4px 9px;
+  font-size: 11px;
+  color: var(--ink);
+}
+
+.ingredient-tag-pill b {
+  font-weight: 500;
+}
+
+.ingredient-tag-pill span {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--muted);
+  background: #eaeaea;
+  padding: 1px 4px;
+  border-radius: 6px;
+}
+
+.attribution-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fefce8;
+  border: 1px solid #fef08a;
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-top: 12px;
+}
+
+.attr-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.attribution-box p {
+  margin: 0;
+  font-size: 11px;
+  color: #854d0e;
+  line-height: 1.4;
+}
+
+/* 6. Fin de semana vs Semana */
+.weekend-comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.pattern-pill {
+  background: #f9f9f8;
+  border: 1px solid #eeeeea;
+  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.pattern-pill small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+
+.pattern-pill strong {
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.pattern-pill strong small {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.pattern-insight {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* 7. Proyección */
+.projection-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #171717 0%, #292929 100%);
+  color: #ffffff;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.proj-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.proj-text strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.proj-text p {
+  margin: 0;
+  font-size: 11px;
+  color: #d4d4d4;
+  line-height: 1.35;
+}
+
+/* 8. Botón Historial Completo */
+.historical-link-styled {
+  border: 1px solid var(--border);
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.historical-link-styled:hover {
+  background: #f9f9f8;
+  border-color: #d4d4d4;
+}
+
+.link-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.link-icon {
+  font-size: 20px;
+}
+
+.link-left strong {
+  display: block;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.link-left small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+.link-arrow {
+  font-size: 20px;
+  color: var(--muted);
+}
+
