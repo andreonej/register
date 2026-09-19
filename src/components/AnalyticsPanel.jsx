@@ -26,22 +26,24 @@ export function AnalyticsPanel({
   }, [comidas, objetivos, perfil, historialPesos]);
 
   const {
-    dias,
-    totalDiasRegistrados,
-    pisoCalorias,
-    techoCalorias,
-    promedioCalorias,
-    promedioProteinas,
-    promedioCarbos,
-    promedioGrasas,
-    heroInfo,
-    scoreDiversidad,
-    topIngredientes,
-    sugerenciasBrecha,
-    diagnosticoAtribucion,
-    mensajeProyeccion,
-    contextoFinde
-  } = analisis;
+    dias = [],
+    totalDiasRegistrados = 0,
+    pisoCalorias = 1500,
+    techoCalorias = 2200,
+    promedioCalorias = 0,
+    promedioProteinas = 0,
+    promedioCarbos = 0,
+    promedioGrasas = 0,
+    heroInfo = { tipo: "mantener", tituloHéroe: "Progreso", valorPrincipal: "0", unidadPrincipal: "kcal", subtitulo: "", badgeTexto: "Comenzando", badgeTipo: "neutro" },
+    scoreDiversidad = 0,
+    topIngredientes = [],
+    sugerenciasBrecha = [],
+    proteinasFaltantesHoy = 0,
+    caloriasRestantesHoy = 0,
+    diagnosticoAtribucion = null,
+    mensajeProyeccion = null,
+    contextoFinde = { promSemana: 0, promFinSemana: 0, diferencia: 0 }
+  } = analisis || {};
 
   const tooltipCustom = ({ active, payload }) => {
     if (active && payload && payload.length) {
