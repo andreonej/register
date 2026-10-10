@@ -72,6 +72,139 @@
 .secondary-reanalyze-btn{width:100%;min-height:40px;font-size:12px;font-weight:600;border-radius:11px;background:#f3f3f1;color:var(--ink);border:1px solid var(--border);cursor:pointer;margin-top:2px}
 .secondary-reanalyze-btn:hover{background:#ebebeb}
 
+/* ==========================================================
+   ESTILOS PARA MODO DESCRIBIR CON IA (TEXTO LIBRE)
+   ========================================================== */
+.text-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.text-prompt-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.text-prompt-intro {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8f8f6;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 2px;
+}
+.text-prompt-icon {
+  font-size: 26px;
+  background: #fff;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px #00000008;
+}
+.text-prompt-title {
+  margin: 0 0 2px;
+  font: 600 15px Fraunces, serif;
+  color: var(--ink);
+}
+.text-prompt-sub {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.text-main-textarea {
+  min-height: 74px;
+  font-size: 13px !important;
+  line-height: 1.45;
+  border-color: #cfcfcb;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.text-main-textarea:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px rgba(23, 23, 23, 0.08);
+}
+.chips-section-title {
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+.chips-section-title small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.text-inline-input {
+  width: 100%;
+  border: 1px solid #dcdcd9;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font: 12px Inter, sans-serif;
+  color: var(--ink);
+  background: #fff;
+}
+.text-inline-input:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+.text-active-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.text-query-bubble {
+  background: #f7f7f5;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.query-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.query-label span {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.text-tweak-btn {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.text-tweak-btn:hover {
+  background: #ebebeb;
+}
+.query-content {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.4;
+  font-style: italic;
+}
+.query-sub {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+
 
 /* ==========================================================
    ESTILOS DE VISTA DE PERFIL Y CÁLCULO METABÓLICO

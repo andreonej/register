@@ -6,7 +6,7 @@ export function obtenerFechaActualLocal() {
   return `${ahora.getFullYear()}-${pad(ahora.getMonth() + 1)}-${pad(ahora.getDate())} ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}`;
 }
 
-const SYSTEM_PROMPT = `
+const SYSTEM_PROMPT_FOTO = `
 Eres un asistente experto en nutrición y análisis dietético visual. Tu objetivo es identificar alimentos en imágenes de comidas, estimar sus nutrientes y generar un JSON estructurado para el registro nutricional.
 
 ==================================================
@@ -72,6 +72,72 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON válido (sin texto antes ni de
 }
 `;
 
+const SYSTEM_PROMPT_TEXTO = `
+Eres un asistente experto en nutrición y estimación dietética. Tu objetivo es analizar descripciones de comidas en lenguaje natural proporcionadas por el usuario, descomponerlas en ingredientes individuales con porciones/pesos realistas estimados en gramos, calcular sus macronutrientes y generar un JSON estructurado para el registro nutricional.
+
+==================================================
+CONFIGURACIÓN DEL USUARIO (PERFIL NUTRICIONAL):
+- Meta diaria de calorías: 2000 kcal
+- Meta diaria de proteínas: 140 g
+- Meta diaria de carbohidratos: 200 g
+- Meta diaria de grasas: 65 g
+==================================================
+
+PROCESO DE ANÁLISIS DE TEXTO:
+1. RAZONAMIENTO Y DESGLOSE:
+- Interpreta descripciones informales o cotidianas (ej: "un sanguche de milanesa con lechuga y tomate", "un puñado de nueces y un café cortado", "2 empanadas de carne", "un plato de fideos con tuco y queso rallado").
+- Si el usuario especifica cantidades, porciones o pesos (ej: "150g de pechuga", "2 rebanadas de pan lactal", "un puñado de unos 30g"), úsalos como referencia prioritaria.
+- Si no especifica cantidades exactas, usa porciones habituales estándar de referencia (ej: puñado de frutos secos ≈ 30g, manzana mediana ≈ 150g, taza de café con leche ≈ 200ml, sándwich de jamón y queso ≈ 180-220g total, empanada estándar al horno ≈ 90-100g, etc.).
+- Incluye supuestos implícitos razonables cuando corresponda (ej: aceite de cocción, aderezo, pan en sándwich, azúcar en café) marcando "supuesto": true si no fueron indicados expresamente por el usuario.
+
+2. ANALIZAR Y ESTIMAR:
+- Identifica cada componente por separado con peso estimado en gramos.
+- Calcula calorías, proteínas, carbohidratos y grasas por ingrediente.
+- Verifica coherencia calórica (proteínas×4 + carbohidratos×4 + grasas×9 ≈ calorías totales).
+- Usa números enteros redondeados para gramos y calorías.
+
+3. CASOS ESPECIALES:
+- Si el texto proporcionado NO describe ningún alimento o bebida consumible (ej: saludos, notas no alimenticias, incoherencias), devuelve un JSON con:
+  { "error": "No se pudo identificar ninguna comida o bebida en la descripción. Por favor escribe qué consumiste (ej: 'un sandwich de jamón y queso' o 'un puñado de nueces')." }
+
+4. NIVEL DE CONFIANZA:
+- "Alto": ingredientes y porciones claramente especificados en el texto.
+- "Medio": alimentos cotidianos reconocidos con estimaciones de porción estándar.
+- "Bajo": descripciones muy generales o ambiguas.
+
+FORMATO OBLIGATORIO DE RESPUESTA:
+Debes responder EXCLUSIVAMENTE con un objeto JSON válido (sin texto antes ni después) con este esquema exacto:
+{
+  "comida_nombre": "Nombre descriptivo y claro de la comida o colación",
+  "fecha": "YYYY-MM-DD HH:mm",
+  "resumen": "Breve explicación de 1-2 oraciones indicando qué alimentos se desglosaron y los supuestos de porción aplicados.",
+  "ingredientes": [
+    {
+      "nombre": "Nombre del ingrediente",
+      "peso_estimado_g": 150,
+      "calorias": 200,
+      "proteinas_g": 25,
+      "carbohidratos_g": 0,
+      "grasas_g": 10,
+      "supuesto": false
+    }
+  ],
+  "totales_plato": {
+    "calorias": 200,
+    "proteinas_g": 25,
+    "carbohidratos_g": 0,
+    "grasas_g": 10
+  },
+  "saldo_diario_restante": {
+    "calorias": 1800,
+    "proteinas_g": 115,
+    "carbohidratos_g": 200,
+    "grasas_g": 55
+  },
+  "nivel_confianza": "Alto"
+}
+`;
+
 export const MODELOS_GEMINI = [
   { id: "gemini-3.7-flash", nombre: "Gemini 3.7 Flash", etiqueta: "Última generación", descripcion: "Modelo más reciente y avanzado con alta velocidad y visión" },
   { id: "gemini-3.6-flash", nombre: "Gemini 3.6 Flash", etiqueta: "Serie 3 Flash", descripcion: "Excelente equilibrio de inteligencia multimodal y rapidez" },
@@ -103,67 +169,9 @@ export function guardarModeloSeleccionado(modeloId) {
 }
 
 /**
- * Analiza una imagen de comida usando la API de Gemini.
- * @param {Object} params
- * @param {string} params.base64Data - Imagen en base64 (sin el prefijo data:image/...)
- * @param {string} params.mimeType - MIME type de la imagen (ej: image/jpeg, image/png)
- * @param {string} [params.detallesAdicionales] - Instrucciones o supuestos adicionales
- * @param {string} [params.modelo] - Identificador del modelo Gemini a utilizar
- * @returns {Promise<Object>} Registro estructurado listo para la BD
+ * Procesa y valida la respuesta JSON de Gemini.
  */
-export async function analizarFotoComida({
-  base64Data,
-  mimeType = "image/jpeg",
-  detallesAdicionales = "",
-  modelo = null
-}) {
-  if (!isGeminiConfigured) {
-    throw new Error("No se ha configurado la API Key de Gemini en el archivo .env (VITE_API_GEMINI).");
-  }
-
-  const modeloActivo = modelo || obtenerModeloSeleccionado();
-  const fechaReferencia = obtenerFechaActualLocal();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloActivo}:generateContent?key=${geminiApiKey}`;
-
-  let promptUsuario = `Analiza esta comida según tus instrucciones. Fecha actual de registro: "${fechaReferencia}".`;
-  if (detallesAdicionales && detallesAdicionales.trim()) {
-    promptUsuario += `\n\nDETALLES ADICIONALES E INGREDIENTES OCULTOS INDICADOS POR EL USUARIO:\n"${detallesAdicionales.trim()}"\nConsidera e integra explícitamente estos detalles (método de cocción, tipo o cantidad de aceite, aderezos, salsas, ingredientes no visibles) para calibrar con precisión los ingredientes, calorías y macronutrientes del plato.`;
-  }
-  promptUsuario += `\n\nGenera el JSON completo estructurado.`;
-
-  const payload = {
-    systemInstruction: {
-      parts: [{ text: SYSTEM_PROMPT }]
-    },
-    contents: [
-      {
-        parts: [
-          {
-            inlineData: {
-              mimeType,
-              data: base64Data
-            }
-          },
-          {
-            text: promptUsuario
-          }
-        ]
-      }
-    ],
-    generationConfig: {
-      responseMimeType: "application/json",
-      temperature: 0.2
-    }
-  };
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
-  });
-
+async function procesarRespuestaGemini(response, modeloActivo, fechaReferencia) {
   if (!response.ok) {
     const errorBody = await response.text();
     let errorMsg = `Error de Gemini API (${response.status})`;
@@ -235,4 +243,130 @@ export async function analizarFotoComida({
   }
 
   return parsed;
+}
+
+/**
+ * Analiza una imagen de comida usando la API de Gemini.
+ * @param {Object} params
+ * @param {string} params.base64Data - Imagen en base64 (sin el prefijo data:image/...)
+ * @param {string} params.mimeType - MIME type de la imagen (ej: image/jpeg, image/png)
+ * @param {string} [params.detallesAdicionales] - Instrucciones o supuestos adicionales
+ * @param {string} [params.modelo] - Identificador del modelo Gemini a utilizar
+ * @returns {Promise<Object>} Registro estructurado listo para la BD
+ */
+export async function analizarFotoComida({
+  base64Data,
+  mimeType = "image/jpeg",
+  detallesAdicionales = "",
+  modelo = null
+}) {
+  if (!isGeminiConfigured) {
+    throw new Error("No se ha configurado la API Key de Gemini en el archivo .env (VITE_API_GEMINI).");
+  }
+
+  const modeloActivo = modelo || obtenerModeloSeleccionado();
+  const fechaReferencia = obtenerFechaActualLocal();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloActivo}:generateContent?key=${geminiApiKey}`;
+
+  let promptUsuario = `Analiza esta comida según tus instrucciones. Fecha actual de registro: "${fechaReferencia}".`;
+  if (detallesAdicionales && detallesAdicionales.trim()) {
+    promptUsuario += `\n\nDETALLES ADICIONALES E INGREDIENTES OCULTOS INDICADOS POR EL USUARIO:\n"${detallesAdicionales.trim()}"\nConsidera e integra explícitamente estos detalles (método de cocción, tipo o cantidad de aceite, aderezos, salsas, ingredientes no visibles) para calibrar con precisión los ingredientes, calorías y macronutrientes del plato.`;
+  }
+  promptUsuario += `\n\nGenera el JSON completo estructurado.`;
+
+  const payload = {
+    systemInstruction: {
+      parts: [{ text: SYSTEM_PROMPT_FOTO }]
+    },
+    contents: [
+      {
+        parts: [
+          {
+            inlineData: {
+              mimeType,
+              data: base64Data
+            }
+          },
+          {
+            text: promptUsuario
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.2
+    }
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  return procesarRespuestaGemini(response, modeloActivo, fechaReferencia);
+}
+
+/**
+ * Analiza una descripción en texto libre de comida usando la API de Gemini.
+ * @param {Object} params
+ * @param {string} params.descripcion - Texto descriptivo de lo que consumió el usuario
+ * @param {string} [params.detallesAdicionales] - Aclaraciones adicionales
+ * @param {string} [params.modelo] - Identificador del modelo Gemini a utilizar
+ * @returns {Promise<Object>} Registro estructurado listo para la BD
+ */
+export async function analizarTextoComida({
+  descripcion,
+  detallesAdicionales = "",
+  modelo = null
+}) {
+  if (!isGeminiConfigured) {
+    throw new Error("No se ha configurado la API Key de Gemini en el archivo .env (VITE_API_GEMINI).");
+  }
+
+  if (!descripcion || !descripcion.trim()) {
+    throw new Error("Por favor escribe qué comiste o tomaste.");
+  }
+
+  const modeloActivo = modelo || obtenerModeloSeleccionado();
+  const fechaReferencia = obtenerFechaActualLocal();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloActivo}:generateContent?key=${geminiApiKey}`;
+
+  let promptUsuario = `Analiza la siguiente comida descrita por el usuario según tus instrucciones.\nFecha actual de registro: "${fechaReferencia}".\n\nDESCRIPCIÓN DE LO CONSUMIDO:\n"${descripcion.trim()}"`;
+  if (detallesAdicionales && detallesAdicionales.trim()) {
+    promptUsuario += `\n\nDETALLES O ACLARACIONES ADICIONALES:\n"${detallesAdicionales.trim()}"`;
+  }
+  promptUsuario += `\n\nGenera el JSON completo estructurado.`;
+
+  const payload = {
+    systemInstruction: {
+      parts: [{ text: SYSTEM_PROMPT_TEXTO }]
+    },
+    contents: [
+      {
+        parts: [
+          {
+            text: promptUsuario
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.2
+    }
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  return procesarRespuestaGemini(response, modeloActivo, fechaReferencia);
 }

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   analizarFotoComida,
+  analizarTextoComida,
   MODELOS_GEMINI,
   obtenerModeloSeleccionado,
   guardarModeloSeleccionado
@@ -63,13 +64,23 @@ export function NewMealDrawer({
   onCerrar,
   onGuardar
 }) {
-  const [pestana, setPestana] = useState("foto"); // "foto" | "json"
+  const [pestana, setPestana] = useState("foto"); // "foto" | "texto" | "json"
+  
+  // Estado para modo Foto
   const [imagenPreview, setImagenPreview] = useState(null);
   const [imagenDatos, setImagenDatos] = useState(null);
   const [detallesAdicionales, setDetallesAdicionales] = useState("");
   const [analizando, setAnalizando] = useState(false);
   const [resultadoIa, setResultadoIa] = useState(null);
   const [errorLocal, setErrorLocal] = useState(null);
+
+  // Estado para modo Descripción en Texto
+  const [descripcionTexto, setDescripcionTexto] = useState("");
+  const [detallesTexto, setDetallesTexto] = useState("");
+  const [analizandoTexto, setAnalizandoTexto] = useState(false);
+  const [resultadoIaTexto, setResultadoIaTexto] = useState(null);
+  const [errorTexto, setErrorTexto] = useState(null);
+
   const [modeloActual, setModeloActual] = useState(modeloProp || obtenerModeloSeleccionado);
 
   const inputCamaraRef = useRef(null);
@@ -92,7 +103,7 @@ export function NewMealDrawer({
 
   if (!abierto) return null;
 
-  const SUGERENCIAS = [
+  const SUGERENCIAS_FOTO = [
     "Frito en aceite",
     "Hecho al horno",
     "A la plancha",
@@ -103,12 +114,34 @@ export function NewMealDrawer({
     "Leche descremada"
   ];
 
-  function agregarSugerencia(sug) {
+  const SUGERENCIAS_TEXTO = [
+    "🥪 Sándwich de milanesa con lechuga y tomate",
+    "🥜 Puñado de nueces y almendras (30g)",
+    "☕ Café cortado con 1 medialuna",
+    "🥟 2 empanadas de carne al horno",
+    "🍕 2 porciones de pizza muzzarella",
+    "🥗 Ensalada de atún, huevo y tomate",
+    "🍎 1 manzana mediana",
+    "🥤 Vaso de gaseosa zero",
+    "🍫 Barrita de cereal",
+    "🍗 Pechuga de pollo grillada con arroz"
+  ];
+
+  function agregarSugerenciaFoto(sug) {
     setDetallesAdicionales((prev) => {
       const limpia = prev.trim();
       if (!limpia) return sug;
       if (limpia.toLowerCase().includes(sug.toLowerCase())) return limpia;
       return `${limpia}, ${sug}`;
+    });
+  }
+
+  function agregarSugerenciaTexto(sug) {
+    setDescripcionTexto((prev) => {
+      const limpia = prev.trim();
+      if (!limpia) return sug;
+      if (limpia.toLowerCase().includes(sug.toLowerCase())) return limpia;
+      return `${limpia} + ${sug}`;
     });
   }
 
@@ -126,7 +159,7 @@ export function NewMealDrawer({
     }
   }
 
-  async function ejecutarAnalisis(modeloForzado = null) {
+  async function ejecutarAnalisisFoto(modeloForzado = null) {
     if (!imagenDatos) return;
     const modeloUsar = modeloForzado || modeloActual;
     if (modeloForzado) {
@@ -149,9 +182,34 @@ export function NewMealDrawer({
     }
   }
 
-  function editarEnJson() {
-    if (resultadoIa) {
-      onTexto(JSON.stringify(resultadoIa, null, 2));
+  async function ejecutarAnalisisTexto(modeloForzado = null) {
+    if (!descripcionTexto.trim()) {
+      setErrorTexto("Por favor escribe qué comiste o tomaste.");
+      return;
+    }
+    const modeloUsar = modeloForzado || modeloActual;
+    if (modeloForzado) {
+      manejarCambioModelo(modeloForzado);
+    }
+    setAnalizandoTexto(true);
+    setErrorTexto(null);
+    try {
+      const resultado = await analizarTextoComida({
+        descripcion: descripcionTexto,
+        detallesAdicionales: detallesTexto,
+        modelo: modeloUsar
+      });
+      setResultadoIaTexto(resultado);
+    } catch (err) {
+      setErrorTexto(err.message);
+    } finally {
+      setAnalizandoTexto(false);
+    }
+  }
+
+  function editarEnJson(datos) {
+    if (datos) {
+      onTexto(JSON.stringify(datos, null, 2));
     }
     setPestana("json");
   }
@@ -164,9 +222,20 @@ export function NewMealDrawer({
     setErrorLocal(null);
   }
 
-  function guardarResultadoIa() {
+  function reiniciarTexto() {
+    setResultadoIaTexto(null);
+    setErrorTexto(null);
+  }
+
+  function guardarResultadoFoto() {
     if (resultadoIa) {
       onGuardar({ ...resultadoIa, foto: imagenDatos ? { base64Data: imagenDatos.base64Data, mimeType: imagenDatos.mimeType } : null });
+    }
+  }
+
+  function guardarResultadoTexto() {
+    if (resultadoIaTexto) {
+      onGuardar({ ...resultadoIaTexto, foto: null });
     }
   }
 
@@ -178,21 +247,28 @@ export function NewMealDrawer({
           <button className="drawer-close" onClick={onCerrar} aria-label="Cerrar">✕</button>
         </div>
 
-        {/* Selector de modo */}
+        {/* Selector de modo: 3 opciones */}
         <div className="drawer-tabs">
           <button
             type="button"
             className={`tab-button ${pestana === "foto" ? "active" : ""}`}
             onClick={() => setPestana("foto")}
           >
-            📸 Foto con IA
+            📸 Foto
+          </button>
+          <button
+            type="button"
+            className={`tab-button ${pestana === "texto" ? "active" : ""}`}
+            onClick={() => setPestana("texto")}
+          >
+            ✍️ Describir
           </button>
           <button
             type="button"
             className={`tab-button ${pestana === "json" ? "active" : ""}`}
             onClick={() => setPestana("json")}
           >
-            📝 Manual (JSON)
+            📝 Manual
           </button>
         </div>
 
@@ -213,6 +289,9 @@ export function NewMealDrawer({
           onChange={manejarArchivo}
         />
 
+        {/* ========================================================= */}
+        {/* PESTAÑA 1: FOTO CON IA                                    */}
+        {/* ========================================================= */}
         {pestana === "foto" && (
           <div className="tab-content photo-tab">
             {!isGeminiConfigured && (
@@ -289,12 +368,12 @@ export function NewMealDrawer({
                     onChange={(e) => setDetallesAdicionales(e.target.value)}
                   />
                   <div className="chips-cloud">
-                    {SUGERENCIAS.map((sug) => (
+                    {SUGERENCIAS_FOTO.map((sug) => (
                       <button
                         key={sug}
                         type="button"
                         className="chip-btn"
-                        onClick={() => agregarSugerencia(sug)}
+                        onClick={() => agregarSugerenciaFoto(sug)}
                       >
                         ＋ {sug}
                       </button>
@@ -306,7 +385,7 @@ export function NewMealDrawer({
                   <button
                     type="button"
                     className="primary analyze-btn"
-                    onClick={() => ejecutarAnalisis()}
+                    onClick={() => ejecutarAnalisisFoto()}
                     disabled={!isGeminiConfigured}
                   >
                     ✨ Analizar plato con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}
@@ -317,7 +396,7 @@ export function NewMealDrawer({
                   <button
                     type="button"
                     className="secondary-reanalyze-btn"
-                    onClick={() => ejecutarAnalisis()}
+                    onClick={() => ejecutarAnalisisFoto()}
                     disabled={!isGeminiConfigured}
                   >
                     🔄 Reanalizar plato con estas instrucciones
@@ -387,7 +466,7 @@ export function NewMealDrawer({
                       <button
                         type="button"
                         className="primary save-ia-btn"
-                        onClick={guardarResultadoIa}
+                        onClick={guardarResultadoFoto}
                         disabled={guardando}
                       >
                         {guardando ? "Guardando en BD…" : "💾 Guardar en Base de Datos"}
@@ -395,7 +474,7 @@ export function NewMealDrawer({
                       <button
                         type="button"
                         className="secondary edit-json-btn"
-                        onClick={editarEnJson}
+                        onClick={() => editarEnJson(resultadoIa)}
                       >
                         ✏️ Editar JSON
                       </button>
@@ -415,7 +494,7 @@ export function NewMealDrawer({
                       <button
                         type="button"
                         className="error-switch-chip"
-                        onClick={() => ejecutarAnalisis("gemini-2.0-flash")}
+                        onClick={() => ejecutarAnalisisFoto("gemini-2.0-flash")}
                         disabled={analizando}
                       >
                         ⚡ Probar Gemini 2.0 Flash
@@ -425,7 +504,7 @@ export function NewMealDrawer({
                       <button
                         type="button"
                         className="error-switch-chip"
-                        onClick={() => ejecutarAnalisis("gemini-1.5-flash")}
+                        onClick={() => ejecutarAnalisisFoto("gemini-1.5-flash")}
                         disabled={analizando}
                       >
                         🛡️ Probar Gemini 1.5 Flash
@@ -435,7 +514,7 @@ export function NewMealDrawer({
                       <button
                         type="button"
                         className="error-switch-chip"
-                        onClick={() => ejecutarAnalisis("gemini-3.7-flash")}
+                        onClick={() => ejecutarAnalisisFoto("gemini-3.7-flash")}
                         disabled={analizando}
                       >
                         🚀 Probar Gemini 3.7 Flash
@@ -448,6 +527,268 @@ export function NewMealDrawer({
           </div>
         )}
 
+        {/* ========================================================= */}
+        {/* PESTAÑA 2: DESCRIBIR CON IA (TEXTO LIBRE)                */}
+        {/* ========================================================= */}
+        {pestana === "texto" && (
+          <div className="tab-content text-tab">
+            {!isGeminiConfigured && (
+              <div className="gemini-warning">
+                ⚠️ No se detectó la clave de Gemini en <code>.env</code> (VITE_API_GEMINI).
+              </div>
+            )}
+
+            {/* Selector rápido de modelo activo */}
+            <div className="drawer-model-bar">
+              <span className="drawer-model-tag">🤖 Modelo Gemini:</span>
+              <select
+                className="drawer-model-select"
+                value={modeloActual}
+                onChange={(e) => manejarCambioModelo(e.target.value)}
+                disabled={analizandoTexto}
+                title="Seleccionar modelo de Gemini"
+              >
+                {MODELOS_GEMINI.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.nombre} · {m.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {!resultadoIaTexto ? (
+              <div className="text-prompt-box">
+                <div className="text-prompt-intro">
+                  <div className="text-prompt-icon">💬</div>
+                  <div>
+                    <h3 className="text-prompt-title">Describe lo que consumiste</h3>
+                    <p className="text-prompt-sub">
+                      Ideal para cuando estás en la calle o sin foto. La IA estimará porciones, ingredientes y calorías exactas.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="hints-card" style={{ marginBottom: "12px" }}>
+                  <label className="hints-label">
+                    <span>✍️ ¿Qué comiste o tomaste?</span>
+                  </label>
+                  <textarea
+                    className="hints-textarea text-main-textarea"
+                    rows="3"
+                    placeholder="Ej: Me comí un sanguche de milanesa con lechuga, tomate y mayonesa en pan francés, y un café cortado..."
+                    value={descripcionTexto}
+                    onChange={(e) => setDescripcionTexto(e.target.value)}
+                    disabled={analizandoTexto}
+                    autoFocus
+                  />
+                  <div className="chips-section-title">
+                    <small>💡 Opciones y atajos frecuentes:</small>
+                  </div>
+                  <div className="chips-cloud">
+                    {SUGERENCIAS_TEXTO.map((sug) => (
+                      <button
+                        key={sug}
+                        type="button"
+                        className="chip-btn"
+                        onClick={() => agregarSugerenciaTexto(sug)}
+                        disabled={analizandoTexto}
+                      >
+                        ＋ {sug}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="hints-card" style={{ marginBottom: "14px" }}>
+                  <label className="hints-label">
+                    <span>💡 Aclaraciones o detalles extra (opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="text-inline-input"
+                    placeholder="Ej: Frito en abundante aceite; edulcorante en lugar de azúcar; porción grande..."
+                    value={detallesTexto}
+                    onChange={(e) => setDetallesTexto(e.target.value)}
+                    disabled={analizandoTexto}
+                  />
+                </div>
+
+                {!analizandoTexto && (
+                  <button
+                    type="button"
+                    className="primary analyze-btn"
+                    onClick={() => ejecutarAnalisisTexto()}
+                    disabled={!isGeminiConfigured || !descripcionTexto.trim()}
+                  >
+                    ✨ Estimar comida con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}
+                  </button>
+                )}
+
+                {analizandoTexto && (
+                  <div className="analyzing-status">
+                    <div className="ai-spinner" />
+                    <p className="analyzing-title">Estimando con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}...</p>
+                    <small>Desglosando alimentos en ingredientes, calculando porciones y nutrientes</small>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-active-view">
+                <div className="text-query-bubble">
+                  <div className="query-label">
+                    <span>💬 Descripción ingresada</span>
+                    <button
+                      type="button"
+                      className="text-tweak-btn"
+                      onClick={reiniciarTexto}
+                      title="Editar descripción"
+                    >
+                      ✏️ Cambiar texto
+                    </button>
+                  </div>
+                  <p className="query-content">“{descripcionTexto}”</p>
+                  {detallesTexto.trim() && (
+                    <p className="query-sub">Detalle: {detallesTexto}</p>
+                  )}
+                </div>
+
+                {analizandoTexto && (
+                  <div className="analyzing-status">
+                    <div className="ai-spinner" />
+                    <p className="analyzing-title">Reanalizando con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}...</p>
+                    <small>Recalculando estimaciones nutricionales</small>
+                  </div>
+                )}
+
+                {!analizandoTexto && (
+                  <div className="ia-result-card">
+                    <div className="ia-result-header">
+                      <div>
+                        <h3>{resultadoIaTexto.comida_nombre}</h3>
+                        {resultadoIaTexto.resumen && <p className="ia-summary">{resultadoIaTexto.resumen}</p>}
+                      </div>
+                      <span className={`confidence-tag confidence-${resultadoIaTexto.nivel_confianza?.toLowerCase()}`}>
+                        {resultadoIaTexto.nivel_confianza}
+                      </span>
+                    </div>
+
+                    {/* Macros pills */}
+                    <div className="ia-macros-pills">
+                      <div className="macro-pill pill-cals">
+                        <strong>{resultadoIaTexto.totales_plato?.calorias ?? 0}</strong>
+                        <span>kcal</span>
+                      </div>
+                      <div className="macro-pill pill-prot">
+                        <strong>{resultadoIaTexto.totales_plato?.proteinas_g ?? 0}g</strong>
+                        <span>Prot</span>
+                      </div>
+                      <div className="macro-pill pill-carbs">
+                        <strong>{resultadoIaTexto.totales_plato?.carbohidratos_g ?? 0}g</strong>
+                        <span>Carb</span>
+                      </div>
+                      <div className="macro-pill pill-fat">
+                        <strong>{resultadoIaTexto.totales_plato?.grasas_g ?? 0}g</strong>
+                        <span>Grasa</span>
+                      </div>
+                    </div>
+
+                    {/* Desglose de ingredientes */}
+                    {resultadoIaTexto.ingredientes && resultadoIaTexto.ingredientes.length > 0 && (
+                      <div className="ia-ingredients-list">
+                        <small className="ingredients-title">Ingredientes estimados:</small>
+                        <ul>
+                          {resultadoIaTexto.ingredientes.map((ing, idx) => (
+                            <li key={idx}>
+                              <span>
+                                {ing.nombre}
+                                {ing.supuesto && <em className="supuesto-badge"> (supuesto)</em>}
+                              </span>
+                              <b>{ing.peso_estimado_g ? `${ing.peso_estimado_g}g` : ""} · {ing.calorias ?? 0} kcal</b>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Botones de acción del resultado */}
+                    <div className="ia-actions">
+                      <button
+                        type="button"
+                        className="primary save-ia-btn"
+                        onClick={guardarResultadoTexto}
+                        disabled={guardando}
+                      >
+                        {guardando ? "Guardando en BD…" : "💾 Guardar en Base de Datos"}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary edit-json-btn"
+                        onClick={() => editarEnJson(resultadoIaTexto)}
+                      >
+                        ✏️ Editar JSON
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="secondary-reanalyze-btn"
+                      onClick={() => ejecutarAnalisisTexto()}
+                      disabled={!isGeminiConfigured}
+                      style={{ marginTop: "10px" }}
+                    >
+                      🔄 Reestimar con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {errorTexto && (
+              <div className="error-recovery-box">
+                <p className="message error">{errorTexto}</p>
+                <div className="error-switch-options">
+                  <small>¿Deseas probar otro modelo con alta disponibilidad?</small>
+                  <div className="error-quick-chips">
+                    {modeloActual !== "gemini-2.0-flash" && (
+                      <button
+                        type="button"
+                        className="error-switch-chip"
+                        onClick={() => ejecutarAnalisisTexto("gemini-2.0-flash")}
+                        disabled={analizandoTexto}
+                      >
+                        ⚡ Probar Gemini 2.0 Flash
+                      </button>
+                    )}
+                    {modeloActual !== "gemini-1.5-flash" && (
+                      <button
+                        type="button"
+                        className="error-switch-chip"
+                        onClick={() => ejecutarAnalisisTexto("gemini-1.5-flash")}
+                        disabled={analizandoTexto}
+                      >
+                        🛡️ Probar Gemini 1.5 Flash
+                      </button>
+                    )}
+                    {modeloActual !== "gemini-3.7-flash" && modeloActual !== "gemini-3.6-flash" && (
+                      <button
+                        type="button"
+                        className="error-switch-chip"
+                        onClick={() => ejecutarAnalisisTexto("gemini-3.7-flash")}
+                        disabled={analizandoTexto}
+                      >
+                        🚀 Probar Gemini 3.7 Flash
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* PESTAÑA 3: MANUAL (JSON)                                  */}
+        {/* ========================================================= */}
         {pestana === "json" && (
           <div className="tab-content json-tab">
             <textarea
