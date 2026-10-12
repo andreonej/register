@@ -72,7 +72,7 @@ export async function crearComida(registro, perfilId = null) {
     confianza: ["alta", "media", "baja"].includes(String(ingrediente.confianza || "").toLowerCase())
       ? String(ingrediente.confianza).toLowerCase()
       : null,
-    supuesto: Boolean(ingrediente.supuesto),
+    supuesto: Boolean(ingrediente.supuesto || ingrediente.origen === "inferido"),
     grupo_nutricional: ingrediente.grupo_nutricional || getNutrientGroup(ingrediente.nombre)
   }));
   if (ingredientes.length) {
