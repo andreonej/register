@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import {
   analizarFotoComida,
   analizarTextoComida,
-  MODELOS_GEMINI,
   obtenerModeloSeleccionado,
   guardarModeloSeleccionado
 } from "../services/gemini";
@@ -296,27 +295,9 @@ export function NewMealDrawer({
           <div className="tab-content photo-tab">
             {!isGeminiConfigured && (
               <div className="gemini-warning">
-                ⚠️ No se detectó la clave de Gemini en <code>.env</code> (VITE_API_GEMINI).
+                ⚠️ El análisis no está disponible. Revisá Ajustes avanzados.
               </div>
             )}
-
-            {/* Selector rápido de modelo activo */}
-            <div className="drawer-model-bar">
-              <span className="drawer-model-tag">🤖 Modelo Gemini:</span>
-              <select
-                className="drawer-model-select"
-                value={modeloActual}
-                onChange={(e) => manejarCambioModelo(e.target.value)}
-                disabled={analizando}
-                title="Seleccionar modelo de Gemini"
-              >
-                {MODELOS_GEMINI.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nombre} · {m.etiqueta}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             {!imagenPreview ? (
               <div className="photo-picker-zone">
@@ -388,7 +369,7 @@ export function NewMealDrawer({
                     onClick={() => ejecutarAnalisisFoto()}
                     disabled={!isGeminiConfigured}
                   >
-                    ✨ Analizar plato con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}
+                    Analizar plato
                   </button>
                 )}
 
@@ -406,7 +387,7 @@ export function NewMealDrawer({
                 {analizando && (
                   <div className="analyzing-status">
                     <div className="ai-spinner" />
-                    <p className="analyzing-title">Analizando con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}...</p>
+                    <p className="analyzing-title">Analizando tu plato...</p>
                     <small>Integrando ingredientes visibles, supuestos e instrucciones</small>
                   </div>
                 )}
@@ -497,7 +478,7 @@ export function NewMealDrawer({
                         onClick={() => ejecutarAnalisisFoto("gemini-2.0-flash")}
                         disabled={analizando}
                       >
-                        ⚡ Probar Gemini 2.0 Flash
+                        Probar otra opción disponible
                       </button>
                     )}
                     {modeloActual !== "gemini-1.5-flash" && (
@@ -507,7 +488,7 @@ export function NewMealDrawer({
                         onClick={() => ejecutarAnalisisFoto("gemini-1.5-flash")}
                         disabled={analizando}
                       >
-                        🛡️ Probar Gemini 1.5 Flash
+                        Probar una opción alternativa
                       </button>
                     )}
                     {modeloActual !== "gemini-3.7-flash" && modeloActual !== "gemini-3.6-flash" && (
@@ -517,7 +498,7 @@ export function NewMealDrawer({
                         onClick={() => ejecutarAnalisisFoto("gemini-3.7-flash")}
                         disabled={analizando}
                       >
-                        🚀 Probar Gemini 3.7 Flash
+                        Probar otra opción
                       </button>
                     )}
                   </div>
@@ -534,27 +515,9 @@ export function NewMealDrawer({
           <div className="tab-content text-tab">
             {!isGeminiConfigured && (
               <div className="gemini-warning">
-                ⚠️ No se detectó la clave de Gemini en <code>.env</code> (VITE_API_GEMINI).
+                ⚠️ El análisis no está disponible. Revisá Ajustes avanzados.
               </div>
             )}
-
-            {/* Selector rápido de modelo activo */}
-            <div className="drawer-model-bar">
-              <span className="drawer-model-tag">🤖 Modelo Gemini:</span>
-              <select
-                className="drawer-model-select"
-                value={modeloActual}
-                onChange={(e) => manejarCambioModelo(e.target.value)}
-                disabled={analizandoTexto}
-                title="Seleccionar modelo de Gemini"
-              >
-                {MODELOS_GEMINI.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nombre} · {m.etiqueta}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             {!resultadoIaTexto ? (
               <div className="text-prompt-box">
@@ -620,14 +583,14 @@ export function NewMealDrawer({
                     onClick={() => ejecutarAnalisisTexto()}
                     disabled={!isGeminiConfigured || !descripcionTexto.trim()}
                   >
-                    ✨ Estimar comida con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}
+                      Estimar comida
                   </button>
                 )}
 
                 {analizandoTexto && (
                   <div className="analyzing-status">
                     <div className="ai-spinner" />
-                    <p className="analyzing-title">Estimando con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}...</p>
+                    <p className="analyzing-title">Estimando tu comida...</p>
                     <small>Desglosando alimentos en ingredientes, calculando porciones y nutrientes</small>
                   </div>
                 )}
@@ -655,7 +618,7 @@ export function NewMealDrawer({
                 {analizandoTexto && (
                   <div className="analyzing-status">
                     <div className="ai-spinner" />
-                    <p className="analyzing-title">Reanalizando con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}...</p>
+                    <p className="analyzing-title">Volviendo a analizar...</p>
                     <small>Recalculando estimaciones nutricionales</small>
                   </div>
                 )}
@@ -736,7 +699,7 @@ export function NewMealDrawer({
                       disabled={!isGeminiConfigured}
                       style={{ marginTop: "10px" }}
                     >
-                      🔄 Reestimar con {MODELOS_GEMINI.find(m => m.id === modeloActual)?.nombre || modeloActual}
+                      Volver a analizar
                     </button>
                   </div>
                 )}
@@ -756,7 +719,7 @@ export function NewMealDrawer({
                         onClick={() => ejecutarAnalisisTexto("gemini-2.0-flash")}
                         disabled={analizandoTexto}
                       >
-                        ⚡ Probar Gemini 2.0 Flash
+                        Probar otra opción disponible
                       </button>
                     )}
                     {modeloActual !== "gemini-1.5-flash" && (
@@ -766,7 +729,7 @@ export function NewMealDrawer({
                         onClick={() => ejecutarAnalisisTexto("gemini-1.5-flash")}
                         disabled={analizandoTexto}
                       >
-                        🛡️ Probar Gemini 1.5 Flash
+                        Probar una opción alternativa
                       </button>
                     )}
                     {modeloActual !== "gemini-3.7-flash" && modeloActual !== "gemini-3.6-flash" && (
@@ -776,7 +739,7 @@ export function NewMealDrawer({
                         onClick={() => ejecutarAnalisisTexto("gemini-3.7-flash")}
                         disabled={analizandoTexto}
                       >
-                        🚀 Probar Gemini 3.7 Flash
+                        Probar otra opción
                       </button>
                     )}
                   </div>

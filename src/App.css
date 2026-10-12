@@ -421,6 +421,36 @@
   border-color: var(--ink);
 }
 
+.advanced-settings > details > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+}
+
+.advanced-settings > details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced-settings > details > summary::after {
+  content: "+";
+  color: var(--muted);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.advanced-settings > details[open] > summary::after {
+  content: "−";
+}
+
+.advanced-settings-content {
+  padding-top: 12px;
+}
+
 /* Recuperación de error con cambio rápido */
 .error-recovery-box {
   background: #fdf1f0;

@@ -479,17 +479,20 @@ export function ProfileView({
         </form>
       </section>
 
-      {/* Configuración de Inteligencia Artificial / Modelos Gemini */}
-      <section className="profile-ai-card">
+      {/* Ajustes avanzados del análisis */}
+      <section className="profile-ai-card advanced-settings">
+        <details>
+          <summary>Ajustes avanzados</summary>
+          <div className="advanced-settings-content">
         <div className="card-header-styled">
           <div>
-            <span className="eyebrow">Inteligencia Artificial</span>
-            <h3>Motor de Reconocimiento Gemini</h3>
+            <span className="eyebrow">Análisis de comidas</span>
+            <h3>Modelo de análisis</h3>
           </div>
           <span className="formula-badge ai-badge">Google AI</span>
         </div>
         <p className="tools-desc">
-          Selecciona el modelo de Gemini que analizará tus comidas. Si en algún momento una versión está saturada o con alta demanda, puedes cambiarla aquí o directamente al tomar la foto.
+          Seleccioná el modelo que analizará tus comidas. Si la opción actual no está disponible, podés cambiarla acá.
         </p>
 
         <div className="ai-models-list">
@@ -553,6 +556,8 @@ export function ProfileView({
             </div>
           )}
         </div>
+          </div>
+        </details>
       </section>
 
       {/* Sincronización y Mantenimiento */}
