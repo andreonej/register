@@ -52,6 +52,12 @@ function procesarImagen(file, maxDimension = 1280, quality = 0.85) {
   });
 }
 
+function formatoConfianza(nivel) {
+  const valor = nivel ? String(nivel).trim().toLocaleLowerCase("es-AR") : "medio";
+  const etiquetas = { alto: "alta", medio: "media", bajo: "baja", alta: "alta", media: "media", baja: "baja" };
+  return `Confianza: ${etiquetas[valor] || "media"}`;
+}
+
 export function NewMealDrawer({
   abierto,
   texto,
@@ -79,6 +85,7 @@ export function NewMealDrawer({
   const [analizandoTexto, setAnalizandoTexto] = useState(false);
   const [resultadoIaTexto, setResultadoIaTexto] = useState(null);
   const [errorTexto, setErrorTexto] = useState(null);
+  const [fotoAmpliada, setFotoAmpliada] = useState(false);
 
   const [modeloActual, setModeloActual] = useState(modeloProp || obtenerModeloSeleccionado);
 
@@ -240,7 +247,7 @@ export function NewMealDrawer({
 
   return (
     <div className="drawer-wrap">
-      <div className="drawer photo-drawer">
+      <div className={`drawer photo-drawer ${resultadoIa || resultadoIaTexto ? "analysis-result-drawer" : ""}`}>
         <div className="drawer-header">
           <h2>Cargar comida</h2>
           <button className="drawer-close" onClick={onCerrar} aria-label="Cerrar">✕</button>
@@ -324,8 +331,10 @@ export function NewMealDrawer({
               </div>
             ) : (
               <div className="photo-active-view">
-                <div className="photo-thumbnail-box">
-                  <img src={imagenPreview} alt="Foto de la comida" className="photo-thumbnail" />
+                <div className={`photo-thumbnail-box ${resultadoIa ? "photo-result-preview" : ""}`}>
+                  <button type="button" className="photo-preview-button" onClick={() => setFotoAmpliada(true)} aria-label="Ampliar foto de la comida">
+                    <img src={imagenPreview} alt="Foto de la comida" className="photo-thumbnail" />
+                  </button>
                   <button
                     type="button"
                     className="photo-retake-btn"
@@ -336,8 +345,8 @@ export function NewMealDrawer({
                   </button>
                 </div>
 
-                {/* Campo de instrucciones e ingredientes ocultos */}
-                <div className="hints-card">
+                <details className="hints-card correction-controls" open={!resultadoIa}>
+                  <summary>{resultadoIa ? "¿Corregir algo?" : "Agregar instrucciones (opcional)"}</summary>
                   <label className="hints-label">
                     <span>💡 Instrucciones o ingredientes ocultos (opcional)</span>
                   </label>
@@ -360,7 +369,17 @@ export function NewMealDrawer({
                       </button>
                     ))}
                   </div>
-                </div>
+                  {resultadoIa && (
+                    <button
+                      type="button"
+                      className="secondary-reanalyze-btn"
+                      onClick={() => ejecutarAnalisisFoto()}
+                      disabled={!isGeminiConfigured || !detallesAdicionales.trim()}
+                    >
+                      Volver a analizar
+                    </button>
+                  )}
+                </details>
 
                 {!resultadoIa && !analizando && (
                   <button
@@ -370,17 +389,6 @@ export function NewMealDrawer({
                     disabled={!isGeminiConfigured}
                   >
                     Analizar plato
-                  </button>
-                )}
-
-                {resultadoIa && !analizando && (
-                  <button
-                    type="button"
-                    className="secondary-reanalyze-btn"
-                    onClick={() => ejecutarAnalisisFoto()}
-                    disabled={!isGeminiConfigured}
-                  >
-                    🔄 Reanalizar plato con estas instrucciones
                   </button>
                 )}
 
@@ -400,7 +408,7 @@ export function NewMealDrawer({
                         {resultadoIa.resumen && <p className="ia-summary">{resultadoIa.resumen}</p>}
                       </div>
                       <span className={`confidence-tag confidence-${resultadoIa.nivel_confianza?.toLowerCase()}`}>
-                        {resultadoIa.nivel_confianza}
+                        {formatoConfianza(resultadoIa.nivel_confianza)}
                       </span>
                     </div>
 
@@ -450,14 +458,14 @@ export function NewMealDrawer({
                         onClick={guardarResultadoFoto}
                         disabled={guardando}
                       >
-                        {guardando ? "Guardando en BD…" : "💾 Guardar en Base de Datos"}
+                        {guardando ? "Guardando…" : "Guardar comida"}
                       </button>
                       <button
                         type="button"
-                        className="secondary edit-json-btn"
+                        className="secondary edit-ingredients-btn"
                         onClick={() => editarEnJson(resultadoIa)}
                       >
-                        ✏️ Editar JSON
+                        Editar ingredientes
                       </button>
                     </div>
                   </div>
@@ -469,7 +477,7 @@ export function NewMealDrawer({
               <div className="error-recovery-box">
                 <p className="message error">{errorLocal}</p>
                 <div className="error-switch-options">
-                  <small>¿Deseas probar otro modelo con alta disponibilidad?</small>
+                  <small>¿Querés probar otra opción? También podés cambiarla en Ajustes avanzados.</small>
                   <div className="error-quick-chips">
                     {modeloActual !== "gemini-2.0-flash" && (
                       <button
@@ -526,7 +534,7 @@ export function NewMealDrawer({
                   <div>
                     <h3 className="text-prompt-title">Describe lo que consumiste</h3>
                     <p className="text-prompt-sub">
-                      Ideal para cuando estás en la calle o sin foto. La IA estimará porciones, ingredientes y calorías exactas.
+                      Ideal para cuando estás en la calle o sin foto. La IA estimará porciones, ingredientes y calorías estimadas.
                     </p>
                   </div>
                 </div>
@@ -596,7 +604,7 @@ export function NewMealDrawer({
                 )}
               </div>
             ) : (
-              <div className="text-active-view">
+              <div className="text-active-view has-result">
                 <div className="text-query-bubble">
                   <div className="query-label">
                     <span>💬 Descripción ingresada</span>
@@ -630,8 +638,8 @@ export function NewMealDrawer({
                         <h3>{resultadoIaTexto.comida_nombre}</h3>
                         {resultadoIaTexto.resumen && <p className="ia-summary">{resultadoIaTexto.resumen}</p>}
                       </div>
-                      <span className={`confidence-tag confidence-${resultadoIaTexto.nivel_confianza?.toLowerCase()}`}>
-                        {resultadoIaTexto.nivel_confianza}
+                    <span className={`confidence-tag confidence-${resultadoIaTexto.nivel_confianza?.toLowerCase()}`}>
+                        {formatoConfianza(resultadoIaTexto.nivel_confianza)}
                       </span>
                     </div>
 
@@ -681,27 +689,49 @@ export function NewMealDrawer({
                         onClick={guardarResultadoTexto}
                         disabled={guardando}
                       >
-                        {guardando ? "Guardando en BD…" : "💾 Guardar en Base de Datos"}
+                        {guardando ? "Guardando…" : "Guardar comida"}
                       </button>
                       <button
                         type="button"
-                        className="secondary edit-json-btn"
+                        className="secondary edit-ingredients-btn"
                         onClick={() => editarEnJson(resultadoIaTexto)}
                       >
-                        ✏️ Editar JSON
+                        Editar ingredientes
                       </button>
                     </div>
 
+                  </div>
+                )}
+
+                {!analizandoTexto && (
+                  <details className="hints-card correction-controls">
+                    <summary>¿Corregir algo?</summary>
+                    <label className="hints-label" htmlFor="correccion-descripcion">Descripción de la comida</label>
+                    <textarea
+                      id="correccion-descripcion"
+                      className="hints-textarea"
+                      rows="3"
+                      value={descripcionTexto}
+                      onChange={(e) => setDescripcionTexto(e.target.value)}
+                    />
+                    <label className="hints-label" htmlFor="correccion-detalles">Aclaraciones (opcional)</label>
+                    <textarea
+                      id="correccion-detalles"
+                      className="hints-textarea"
+                      rows="2"
+                      placeholder="Ej: era sin mayonesa"
+                      value={detallesTexto}
+                      onChange={(e) => setDetallesTexto(e.target.value)}
+                    />
                     <button
                       type="button"
                       className="secondary-reanalyze-btn"
                       onClick={() => ejecutarAnalisisTexto()}
-                      disabled={!isGeminiConfigured}
-                      style={{ marginTop: "10px" }}
+                      disabled={!isGeminiConfigured || !descripcionTexto.trim()}
                     >
                       Volver a analizar
                     </button>
-                  </div>
+                  </details>
                 )}
               </div>
             )}
@@ -710,7 +740,7 @@ export function NewMealDrawer({
               <div className="error-recovery-box">
                 <p className="message error">{errorTexto}</p>
                 <div className="error-switch-options">
-                  <small>¿Deseas probar otro modelo con alta disponibilidad?</small>
+                  <small>¿Querés probar otra opción? También podés cambiarla en Ajustes avanzados.</small>
                   <div className="error-quick-chips">
                     {modeloActual !== "gemini-2.0-flash" && (
                       <button
@@ -771,6 +801,13 @@ export function NewMealDrawer({
                 {guardando ? "Guardando…" : "Guardar comida"}
               </button>
             </div>
+          </div>
+        )}
+
+        {fotoAmpliada && imagenPreview && (
+          <div className="photo-lightbox" role="dialog" aria-modal="true" aria-label="Foto ampliada" onClick={() => setFotoAmpliada(false)}>
+            <button type="button" onClick={() => setFotoAmpliada(false)} aria-label="Cerrar foto ampliada">Cerrar</button>
+            <img src={imagenPreview} alt="Foto completa de la comida" />
           </div>
         )}
 

@@ -88,9 +88,15 @@ export default function DiarioComidas() {
       const comidaGuardada = await crearComida(registro, perfil?.id);
       setTextoJson("");
       setPanelAbierto(false);
-      const comidasActualizadas = await obtenerComidas();
-      setComidas(comidasActualizadas);
-      const comidaVisible = comidasActualizadas.find((comida) => comida.id === comidaGuardada.id) || comidaGuardada;
+      setComidas((actuales) => [comidaGuardada, ...actuales.filter((comida) => comida.id !== comidaGuardada.id)]);
+      let comidaVisible = comidaGuardada;
+      try {
+        const comidasActualizadas = await obtenerComidas();
+        setComidas(comidasActualizadas);
+        comidaVisible = comidasActualizadas.find((comida) => comida.id === comidaGuardada.id) || comidaGuardada;
+      } catch {
+        setError("La comida se guardó, pero no se pudo actualizar la lista.");
+      }
       const diaComida = fechaLocalDia(comidaVisible.fecha || registro.fecha);
       setDiaSeleccionado(diaComida);
       setVista("diario");
