@@ -9,7 +9,8 @@
 /* Estilos de Drawer y Foto con IA */
 .photo-drawer{max-height:min(88vh,720px);overflow-y:auto;scrollbar-width:thin}
 .photo-drawer.analysis-result-drawer{max-height:calc(100dvh - 88px);margin-bottom:76px}
-.photo-drawer.text-compose-drawer{max-height:calc(100dvh - 12px);margin-bottom:8px}
+.photo-drawer.text-compose-drawer{max-height:calc(var(--visual-viewport-height, 100dvh) - 12px);margin-bottom:8px}
+.drawer-wrap:has(.text-compose-drawer){bottom:var(--keyboard-overlay-height,0px)}
 .drawer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .drawer-header h2{margin:0;font-size:20px}
 .drawer-close{border:0;background:#f2f2f0;color:var(--ink);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;cursor:pointer}

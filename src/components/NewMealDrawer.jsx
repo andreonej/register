@@ -258,6 +258,29 @@ export function NewMealDrawer({
     drawerAbiertoRef.current = abierto;
   }, [abierto, modeloProp]);
 
+  useEffect(() => {
+    if (!abierto) return undefined;
+    const viewport = window.visualViewport;
+    const ajustarAlViewport = () => {
+      const alturaVisible = viewport?.height || window.innerHeight;
+      const desplazamiento = viewport?.offsetTop || 0;
+      const espacioTeclado = Math.max(0, window.innerHeight - alturaVisible - desplazamiento);
+      document.documentElement.style.setProperty("--visual-viewport-height", `${alturaVisible}px`);
+      document.documentElement.style.setProperty("--keyboard-overlay-height", `${espacioTeclado}px`);
+    };
+    ajustarAlViewport();
+    viewport?.addEventListener("resize", ajustarAlViewport);
+    viewport?.addEventListener("scroll", ajustarAlViewport);
+    window.addEventListener("resize", ajustarAlViewport);
+    return () => {
+      viewport?.removeEventListener("resize", ajustarAlViewport);
+      viewport?.removeEventListener("scroll", ajustarAlViewport);
+      window.removeEventListener("resize", ajustarAlViewport);
+      document.documentElement.style.removeProperty("--visual-viewport-height");
+      document.documentElement.style.removeProperty("--keyboard-overlay-height");
+    };
+  }, [abierto]);
+
   function manejarCambioModelo(nuevoModelo) {
     setModeloActual(nuevoModelo);
     guardarModeloSeleccionado(nuevoModelo);
@@ -389,8 +412,14 @@ export function NewMealDrawer({
   function seleccionarMomentoRapido(opcion) {
     const fecha = new Date();
     if (opcion === "hora") fecha.setHours(fecha.getHours() - 1);
-    if (opcion === "manana") fecha.setHours(8, 0, 0, 0);
-    if (opcion === "mediodia") fecha.setHours(12, 0, 0, 0);
+    if (opcion === "manana") {
+      if (fecha.getHours() < 8) fecha.setDate(fecha.getDate() - 1);
+      fecha.setHours(8, 0, 0, 0);
+    }
+    if (opcion === "mediodia") {
+      if (fecha.getHours() < 12) fecha.setDate(fecha.getDate() - 1);
+      fecha.setHours(12, 0, 0, 0);
+    }
     if (opcion === "anoche") {
       fecha.setDate(fecha.getDate() - 1);
       fecha.setHours(20, 0, 0, 0);
