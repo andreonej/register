@@ -50,9 +50,14 @@ function formatoConfianza(nivel) {
   return `Confianza: ${etiquetas[valor] || "media"}`;
 }
 
+function redondear(valor, decimales = 2) {
+  const precision = 10 ** decimales;
+  return Math.round((Number(valor) + Number.EPSILON) * precision) / precision;
+}
+
 export function escalarResultado(resultado, factor) {
   if (!resultado) return resultado;
-  const escalar = (valor) => Number(valor || 0) * factor;
+  const escalar = (valor) => redondear(Number(valor || 0) * factor);
   return {
     ...resultado,
     totales_plato: Object.fromEntries(Object.entries(resultado.totales_plato || {}).map(([clave, valor]) => [clave, escalar(valor)])),
@@ -68,12 +73,13 @@ export function escalarResultado(resultado, factor) {
 }
 
 function totalesDeIngredientes(ingredientes) {
-  return ingredientes.reduce((totales, ingrediente) => ({
-    calorias: totales.calorias + Number(ingrediente.calorias || 0),
-    proteinas_g: totales.proteinas_g + Number(ingrediente.proteinas_g || 0),
-    carbohidratos_g: totales.carbohidratos_g + Number(ingrediente.carbohidratos_g || 0),
-    grasas_g: totales.grasas_g + Number(ingrediente.grasas_g || 0)
+  const totales = ingredientes.reduce((acumulado, ingrediente) => ({
+    calorias: acumulado.calorias + Number(ingrediente.calorias || 0),
+    proteinas_g: acumulado.proteinas_g + Number(ingrediente.proteinas_g || 0),
+    carbohidratos_g: acumulado.carbohidratos_g + Number(ingrediente.carbohidratos_g || 0),
+    grasas_g: acumulado.grasas_g + Number(ingrediente.grasas_g || 0)
   }), { calorias: 0, proteinas_g: 0, carbohidratos_g: 0, grasas_g: 0 });
+  return Object.fromEntries(Object.entries(totales).map(([clave, valor]) => [clave, redondear(valor)]));
 }
 
 export function cambiarGramosResultado(resultado, indice, gramos) {
@@ -86,10 +92,10 @@ export function cambiarGramosResultado(resultado, indice, gramos) {
   ingredientes[indice] = {
     ...anterior,
     peso_estimado_g: gramos,
-    calorias: Number(anterior.calorias || 0) * escala,
-    proteinas_g: Number(anterior.proteinas_g || 0) * escala,
-    carbohidratos_g: Number(anterior.carbohidratos_g || 0) * escala,
-    grasas_g: Number(anterior.grasas_g || 0) * escala
+    calorias: redondear(Number(anterior.calorias || 0) * escala),
+    proteinas_g: redondear(Number(anterior.proteinas_g || 0) * escala),
+    carbohidratos_g: redondear(Number(anterior.carbohidratos_g || 0) * escala),
+    grasas_g: redondear(Number(anterior.grasas_g || 0) * escala)
   };
   return { ...resultado, ingredientes, totales_plato: totalesDeIngredientes(ingredientes) };
 }
@@ -98,7 +104,7 @@ function IngredientsEditor({ ingredientes = [], onNombre, onGramos, onEliminar, 
   return (
     <div className="ingredient-editor">
       {ingredientes.map((ingrediente, indice) => (
-        <div className="ingredient-editor-row" key={`${indice}-${ingrediente.nombre}`}>
+        <div className="ingredient-editor-row" key={indice}>
           <div className="ingredient-editor-fields">
             <label>
               <span>Ingrediente</span>
