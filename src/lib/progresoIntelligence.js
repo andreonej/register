@@ -27,29 +27,31 @@ export function analizarProgreso({
   objetivos = { calorias: 2000, proteinas: 140, carbohidratos: 200, grasas: 65 },
   perfil = {},
   historialPesos = [],
-  fechaReferencia = new Date()
+  fechaReferencia = new Date(),
+  ventanaDias = 7
 }) {
   const objetivoTipo = perfil?.objetivo || "mantener"; // "bajar" | "subir" | "mantener"
   const tdeeUsuario = perfil?.tdee || (objetivoTipo === "bajar" ? objetivos.calorias + 400 : objetivoTipo === "subir" ? Math.max(1600, objetivos.calorias - 350) : objetivos.calorias);
 
-  // 1. Agrupar por los últimos 7 días
+  // 1. Agrupar por la ventana seleccionada
   const hoy = new Date(fechaReferencia);
   const hoyIso = fechaLocalDia(hoy);
-  const ultimos7Dias = Array.from({ length: 7 }, (_, i) => {
+  const ultimos7Dias = Array.from({ length: ventanaDias }, (_, i) => {
     const fecha = new Date(hoy);
-    fecha.setDate(hoy.getDate() - 6 + i);
+    fecha.setDate(hoy.getDate() - ventanaDias + 1 + i);
     const diaIso = fechaLocalDia(fecha);
     const esFinDeSemana = fecha.getDay() === 0 || fecha.getDay() === 6;
     return {
       dia: diaIso,
       fechaObj: fecha,
       esFinDeSemana,
-      etiqueta: fecha.toLocaleDateString("es-AR", { weekday: "short" }).replace(".", ""),
+      etiqueta: ventanaDias === 7 ? fecha.toLocaleDateString("es-AR", { weekday: "short" }).replace(".", "") : String(fecha.getDate()),
       esHoy: diaIso === hoyIso,
       calorias: 0,
       proteinas: 0,
       carbohidratos: 0,
       grasas: 0,
+      fibra: 0,
       comidas: []
     };
   });
@@ -84,6 +86,7 @@ export function analizarProgreso({
         proteinas_g: Number(ing.proteinas_g || 0),
         carbohidratos_g: Number(ing.carbohidratos_g || 0),
         grasas_g: Number(ing.grasas_g || 0),
+        grupo_nutricional: ing.grupo_nutricional || "",
         peso_g: Number(ing.peso_estimado_g || 0),
         fecha: comida.fecha,
         diaIso
@@ -211,6 +214,7 @@ export function analizarProgreso({
         veces: 0,
         caloriasTotales: 0,
         proteinasTotales: 0,
+        carbohidratosTotales: 0,
         grasasTotales: 0,
         pesosTotales: 0
       };
@@ -218,11 +222,22 @@ export function analizarProgreso({
     conteoIngredientes[nombreNorm].veces += 1;
     conteoIngredientes[nombreNorm].caloriasTotales += ing.calorias;
     conteoIngredientes[nombreNorm].proteinasTotales += ing.proteinas_g;
+    conteoIngredientes[nombreNorm].carbohidratosTotales += ing.carbohidratos_g;
     conteoIngredientes[nombreNorm].grasasTotales += ing.grasas_g;
     conteoIngredientes[nombreNorm].pesosTotales += ing.peso_g;
   });
 
+  const noMostrarEnRanking = (nombre) => /aceite|manteca|margarina|mayonesa|sal\b|pimienta|oregano|orégano|condimento|vinagre|ajo en polvo/.test(nombre);
+  const categorizarIngrediente = (nombre) => {
+    if (/cerveza|vino|whisky|vodka|fernet|gin|ron|licor|alcohol/.test(nombre)) return "alcohol";
+    if (/galleta|alfajor|gaseosa|snack|papas fritas|chocolate|dulce|factura|ultraproces/.test(nombre)) return "ultraprocesados";
+    if (/lechuga|tomate|pepino|zanahoria|brocoli|brócoli|espinaca|verdura|vegetal|palta|acelga|cebolla|pimiento|morron|mor(r)?ón|zapallo|calabaza/.test(nombre)) return "verduras";
+    if (INGREDIENTES_PROTEICOS.some((item) => nombre.includes(normalizarTexto(item)))) return "proteinas";
+    return "otros";
+  };
   const listaIngredientesTop = Object.values(conteoIngredientes)
+    .filter((ing) => !noMostrarEnRanking(ing.nombreNorm))
+    .map((ing) => ({ ...ing, categoria: categorizarIngrediente(ing.nombreNorm) }))
     .sort((a, b) => b.veces - a.veces || b.caloriasTotales - a.caloriasTotales)
     .slice(0, 10);
 
@@ -239,43 +254,38 @@ export function analizarProgreso({
   const diaHoy = ultimos7Dias.find((d) => d.esHoy) || ultimos7Dias[ultimos7Dias.length - 1];
   const proteinasFaltantesHoy = Math.max(0, objetivos.proteinas - (diaHoy?.proteinas || 0));
   const caloriasRestantesHoy = Math.max(0, objetivos.calorias - (diaHoy?.calorias || 0));
-
-  // Buscar alimentos proteicos habituales del usuario
-  const proteicosHabituales = Object.values(conteoIngredientes).filter((ing) => {
-    const norm = ing.nombreNorm;
-    return INGREDIENTES_PROTEICOS.some((p) => norm.includes(p));
-  });
-
+  const grasasRestantesHoy = Math.max(0, objetivos.grasas - (diaHoy?.grasas || 0));
+  const carbohidratosRestantesHoy = Math.max(0, objetivos.carbohidratos - (diaHoy?.carbohidratos || 0));
+  const proteicosHabituales = Object.values(conteoIngredientes).filter((ing) => INGREDIENTES_PROTEICOS.some((p) => ing.nombreNorm.includes(normalizarTexto(p))) && ing.pesosTotales > 0 && ing.proteinasTotales > 0);
   const sugerenciasBrecha = [];
   if (proteinasFaltantesHoy > 15) {
-    if (proteicosHabituales.length > 0) {
-      const topProt1 = proteicosHabituales[0];
-      const gramosAprox = Math.round((proteinasFaltantesHoy / 0.22)); // ~22g prot cada 100g de carne/pollo
-      sugerenciasBrecha.push({
-        titulo: `Añadir ~${Math.min(250, Math.max(80, gramosAprox))}g de ${topProt1.nombreOriginal}`,
-        aporte: `+${proteinasFaltantesHoy}g proteína`,
-        motivo: "Alimento habitual en tus registros"
-      });
-      if (proteicosHabituales.length > 1) {
-        const topProt2 = proteicosHabituales[1];
-        sugerenciasBrecha.push({
-          titulo: `Combinar con ${topProt2.nombreOriginal}`,
-          aporte: "Opción rápida y equilibrada",
-          motivo: "Ajustado a tu repertorio frecuente"
-        });
-      }
-    } else {
-      // Sugerencias generales inteligentes
-      sugerenciasBrecha.push({
-        titulo: `150g Pechuga de pollo o Atún (~35g prot)`,
-        aporte: `Cubre tu faltante de ${proteinasFaltantesHoy}g`,
-        motivo: "Alta densidad proteica y bajas calorías"
-      });
-      sugerenciasBrecha.push({
-        titulo: `2 Huevos + 150g Yogur griego (~28g prot)`,
-        aporte: `Aporte completo y saciante`,
-        motivo: "Fácil de preparar como merienda/cena"
-      });
+    const candidatos = proteicosHabituales.map((ing) => ({
+      nombre: ing.nombreOriginal,
+      proteina100: ing.proteinasTotales / ing.pesosTotales * 100,
+      carbo100: ing.carbohidratosTotales / ing.pesosTotales * 100,
+      kcal100: ing.caloriasTotales / ing.pesosTotales * 100,
+      grasa100: ing.grasasTotales / ing.pesosTotales * 100,
+      veces: ing.veces
+    })).filter((ing) => Number.isFinite(ing.proteina100) && ing.proteina100 > 0 && ing.kcal100 >= 0 && ing.grasa100 >= 0)
+      .sort((a, b) => b.proteina100 - a.proteina100 || b.veces - a.veces);
+    const dimensionar = (candidato, objetivoProteina) => {
+      const limites = [objetivoProteina / candidato.proteina100 * 100, 250];
+      if (candidato.kcal100 > 0) limites.push(caloriasRestantesHoy / candidato.kcal100 * 100);
+      if (candidato.grasa100 > 0) limites.push(grasasRestantesHoy / candidato.grasa100 * 100);
+      if (candidato.carbo100 > 0) limites.push(carbohidratosRestantesHoy / candidato.carbo100 * 100);
+      const gramos = Math.floor(Math.min(...limites));
+      if (gramos < 10) return null;
+      return { nombre: candidato.nombre, gramos, calorias: Math.round(candidato.kcal100 * gramos / 100), proteinas: Math.round(candidato.proteina100 * gramos / 100), grasas: Math.round(candidato.grasa100 * gramos / 100), carbohidratos: Math.round((candidato.carbo100 || 0) * gramos / 100) };
+    };
+    candidatos.forEach((candidato) => {
+      const porcion = dimensionar(candidato, proteinasFaltantesHoy);
+      if (porcion) sugerenciasBrecha.push({ titulo: `${porcion.gramos} g de ${porcion.nombre}`, componentes: [porcion], calorias: porcion.calorias, proteinas: porcion.proteinas, grasas: porcion.grasas, carbohidratos: porcion.carbohidratos, motivo: "Alimento proteico habitual que cabe en tus objetivos restantes" });
+    });
+    if (candidatos.length > 1) {
+      const porciones = candidatos.slice(0, 2).map((item) => dimensionar(item, proteinasFaltantesHoy / 2));
+      const combinacion = porciones.filter(Boolean);
+      const kcal = combinacion.reduce((s, p) => s + p.calorias, 0), grasa = combinacion.reduce((s, p) => s + p.grasas, 0), carbos = combinacion.reduce((s, p) => s + p.carbohidratos, 0);
+      if (combinacion.length === 2 && kcal <= caloriasRestantesHoy && grasa <= grasasRestantesHoy && carbos <= carbohidratosRestantesHoy) sugerenciasBrecha.unshift({ titulo: combinacion.map((p) => `${p.gramos} g de ${p.nombre}`).join(" + "), componentes: combinacion, calorias: kcal, proteinas: combinacion.reduce((s, p) => s + p.proteinas, 0), grasas: grasa, carbohidratos: carbos, motivo: "Combinación de alimentos habituales dentro de tus objetivos restantes" });
     }
   }
 
@@ -343,6 +353,8 @@ export function analizarProgreso({
     sugerenciasBrecha,
     proteinasFaltantesHoy,
     caloriasRestantesHoy,
+    grasasRestantesHoy,
+    carbohidratosRestantesHoy,
     diagnosticoAtribucion,
     mensajeProyeccion,
     contextoFinde: {
