@@ -47,13 +47,16 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON válido (sin texto antes ni de
   "resumen": "Breve explicación de 1-2 oraciones indicando qué alimentos se identificaron y qué supuestos se aplicaron.",
   "ingredientes": [
     {
-      "nombre": "Nombre del ingrediente",
+      "nombre": "Un solo nombre claro, sin alternativas separadas por barra",
+      "alias": "Sinónimo opcional",
+      "cantidad": 1,
       "peso_estimado_g": 150,
       "calorias": 200,
       "proteinas_g": 25,
       "carbohidratos_g": 0,
       "grasas_g": 10,
-      "supuesto": false
+      "supuesto": false,
+      "confianza": "alta"
     }
   ],
   "totales_plato": {
@@ -68,8 +71,11 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON válido (sin texto antes ni de
     "carbohidratos_g": 200,
     "grasas_g": 55
   },
-  "nivel_confianza": "Alto"
+  "nivel_confianza": "Alta",
+  "confianza_general": "alta",
+  "sugerencias_correccion": ["Al horno", "Sin aderezo"]
 }
+Agrupa elementos iguales o casi idénticos en un ingrediente con cantidad (por ejemplo, dos empanadas iguales: cantidad 2 y nutrientes/peso del total). No dupliques ingredientes equivalentes. Sugiere hasta 6 correcciones breves y relevantes para este plato; no uses opciones genéricas que no correspondan.
 `;
 
 const SYSTEM_PROMPT_TEXTO = `
@@ -113,13 +119,16 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON válido (sin texto antes ni de
   "resumen": "Breve explicación de 1-2 oraciones indicando qué alimentos se desglosaron y los supuestos de porción aplicados.",
   "ingredientes": [
     {
-      "nombre": "Nombre del ingrediente",
+      "nombre": "Un solo nombre claro, sin alternativas separadas por barra",
+      "alias": "Sinónimo opcional",
+      "cantidad": 1,
       "peso_estimado_g": 150,
       "calorias": 200,
       "proteinas_g": 25,
       "carbohidratos_g": 0,
       "grasas_g": 10,
-      "supuesto": false
+      "supuesto": false,
+      "confianza": "media"
     }
   ],
   "totales_plato": {
@@ -134,8 +143,11 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON válido (sin texto antes ni de
     "carbohidratos_g": 200,
     "grasas_g": 55
   },
-  "nivel_confianza": "Alto"
+  "nivel_confianza": "Media",
+  "confianza_general": "media",
+  "sugerencias_correccion": ["Sin mayonesa", "Porción chica"]
 }
+Agrupa elementos iguales o casi idénticos en un ingrediente con cantidad (por ejemplo, dos empanadas iguales: cantidad 2 y nutrientes/peso del total). No dupliques ingredientes equivalentes. Sugiere hasta 6 correcciones breves y relevantes para este plato; no uses opciones genéricas que no correspondan.
 `;
 
 export const MODELOS_GEMINI = [
@@ -238,9 +250,22 @@ async function procesarRespuestaGemini(response, modeloActivo, fechaReferencia) 
     );
   }
 
-  if (!parsed.nivel_confianza) {
-    parsed.nivel_confianza = "Medio";
-  }
+  const normalizarConfianza = (valor, predeterminado = "media") => {
+    const normalizada = String(valor || predeterminado).trim().toLocaleLowerCase("es-AR");
+    return ["alta", "media", "baja"].includes(normalizada) ? normalizada : predeterminado;
+  };
+  const confianzaGeneral = normalizarConfianza(parsed.confianza_general || parsed.nivel_confianza);
+  parsed.confianza_general = confianzaGeneral;
+  parsed.nivel_confianza = confianzaGeneral.charAt(0).toLocaleUpperCase("es-AR") + confianzaGeneral.slice(1);
+  parsed.ingredientes = Array.isArray(parsed.ingredientes) ? parsed.ingredientes.map((ingrediente) => ({
+    ...ingrediente,
+    cantidad: Math.max(1, Math.round(Number(ingrediente.cantidad) || 1)),
+    alias: typeof ingrediente.alias === "string" ? ingrediente.alias : null,
+    confianza: normalizarConfianza(ingrediente.confianza, confianzaGeneral)
+  })) : [];
+  parsed.sugerencias_correccion = Array.isArray(parsed.sugerencias_correccion)
+    ? [...new Set(parsed.sugerencias_correccion.filter((sugerencia) => typeof sugerencia === "string").map((sugerencia) => sugerencia.trim()).filter(Boolean))].slice(0, 6)
+    : [];
 
   return parsed;
 }
