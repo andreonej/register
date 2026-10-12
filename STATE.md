@@ -85,6 +85,7 @@ Etapa 8 — Progreso y cierre de brecha; implementación en curso, validación m
 - Verificación técnica etapa 7: `npm run build` y `git diff --check` correctos; HTTP 200. Validación manual confirmada por el usuario.
 - Etapa 8: Progreso tiene un único título, mantiene el insight/estabilidad al inicio y ordena gráfico, balance, patrón semanal, ADN e historial; selector Semana/Mes, detalle táctil de barras con fecha/kcal/diferencia, y filtros de ADN (proteínas, verduras, alcohol, ultraprocesados y otros). Condimentos y aceites se excluyen del ranking.
 - Etapa 8: las sugerencias de cierre de brecha usan densidades nutricionales de ingredientes habituales y se limitan por kcal, grasas y carbohidratos restantes; muestran cantidades concretas y macros. Hay opción combinada si dos alimentos caben dentro de los límites. En Hoy se reutilizan las sugerencias y se oculta el bloque si no faltan más de 15 g de proteína.
+- Cierre de brecha muestra como máximo cinco sugerencias, priorizadas por frecuencia de uso y manteniendo la combinación dentro del límite.
 - Etapa 8: para el objetivo Mantener, Progreso muestra un registro manual de peso y tendencia de los últimos 30 días con los servicios existentes.
 - Verificación técnica etapa 8: `npm run build` correcto y `git diff --check` limpio. Falta la validación manual.
 - Siguiente paso exacto: probar Semana/Mes, tocar una barra, filtrar cada categoría del ADN, revisar sugerencias con límites de kcal/macros y registrar un peso con objetivo Mantener.

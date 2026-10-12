@@ -266,7 +266,7 @@ export function analizarProgreso({
       grasa100: ing.grasasTotales / ing.pesosTotales * 100,
       veces: ing.veces
     })).filter((ing) => Number.isFinite(ing.proteina100) && ing.proteina100 > 0 && ing.kcal100 > 0 && ing.grasa100 >= 0)
-      .sort((a, b) => b.proteina100 - a.proteina100 || b.veces - a.veces);
+      .sort((a, b) => b.veces - a.veces || b.proteina100 - a.proteina100);
     const dimensionar = (candidato, objetivoProteina) => {
       const limites = [objetivoProteina / candidato.proteina100 * 100, 250];
       if (candidato.kcal100 > 0) limites.push(caloriasRestantesHoy / candidato.kcal100 * 100);
@@ -286,6 +286,7 @@ export function analizarProgreso({
       const kcal = combinacion.reduce((s, p) => s + p.calorias, 0), grasa = combinacion.reduce((s, p) => s + p.grasas, 0), carbos = combinacion.reduce((s, p) => s + p.carbohidratos, 0);
       if (combinacion.length === 2 && kcal <= caloriasRestantesHoy && grasa <= grasasRestantesHoy && carbos <= carbohidratosRestantesHoy) sugerenciasBrecha.unshift({ titulo: combinacion.map((p) => `${p.gramos} g de ${p.nombre}`).join(" + "), componentes: combinacion, calorias: kcal, proteinas: combinacion.reduce((s, p) => s + p.proteinas, 0), grasas: grasa, carbohidratos: carbos, motivo: "Combinación de alimentos habituales dentro de tus objetivos restantes" });
     }
+    sugerenciasBrecha.splice(5);
   }
 
   // 6. Diagnóstico & Atribución (qué explica los desvíos)
