@@ -9,6 +9,7 @@
 /* Estilos de Drawer y Foto con IA */
 .photo-drawer{max-height:min(88vh,720px);overflow-y:auto;scrollbar-width:thin}
 .photo-drawer.analysis-result-drawer{max-height:calc(100dvh - 88px);margin-bottom:76px}
+.photo-drawer.text-compose-drawer{max-height:calc(100dvh - 12px);margin-bottom:8px}
 .drawer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .drawer-header h2{margin:0;font-size:20px}
 .drawer-close{border:0;background:#f2f2f0;color:var(--ink);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;cursor:pointer}
@@ -169,6 +170,7 @@
 .text-main-textarea {
   min-height: 74px;
   font-size: 13px !important;
+  font-family: Inter, sans-serif !important;
   line-height: 1.45;
   border-color: #cfcfcb;
   transition: border-color .15s ease, box-shadow .15s ease;
@@ -201,6 +203,16 @@
   outline: none;
   border-color: var(--ink);
 }
+.meal-time-picker{min-width:0;margin:0 0 10px;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff}
+.meal-time-picker legend{padding:0 5px;font-size:12px;font-weight:600;color:var(--ink)}
+.meal-time-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.meal-time-options button{min-height:44px;padding:6px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--ink);font:500 10px Inter,sans-serif;cursor:pointer;touch-action:manipulation}
+.meal-time-options button.selected{border-color:var(--ink);background:var(--ink);color:#fff}
+.meal-time-picker input{width:100%;height:44px;margin-top:8px;padding:0 10px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--ink);font:12px Inter,sans-serif}
+.text-analyze-sticky{position:sticky;z-index:3;bottom:0;padding:10px 0 max(8px,env(safe-area-inset-bottom));background:linear-gradient(180deg,#ffffffd9,#fff 24%)}
+.ingredient-origin{display:inline-block;margin-left:5px;font-size:10px;font-style:normal;white-space:nowrap}
+.origin-usuario{color:#4c6650}
+.origin-inferido{color:var(--muted)}
 .text-active-view {
   display: flex;
   flex-direction: column;

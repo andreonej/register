@@ -55,6 +55,17 @@ function confianzaNormalizada(valor) {
   return ["alta", "media", "baja"].includes(normalizada) ? normalizada : "media";
 }
 
+function fechaHoraLocalInput(fecha) {
+  const pad = (valor) => String(valor).padStart(2, "0");
+  return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;
+}
+
+function fechaHoraLegible(valor) {
+  if (!valor) return "Ahora";
+  const fecha = new Date(valor);
+  return Number.isNaN(fecha.getTime()) ? valor : fecha.toLocaleString("es-AR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+}
+
 function SugerenciasCorreccion({ sugerencias = [], onSeleccionar }) {
   if (!sugerencias.length) return null;
   return (
@@ -219,6 +230,8 @@ export function NewMealDrawer({
   // Estado para modo Descripción en Texto
   const [descripcionTexto, setDescripcionTexto] = useState("");
   const [detallesTexto, setDetallesTexto] = useState("");
+  const [fechaComidaTexto, setFechaComidaTexto] = useState(() => fechaHoraLocalInput(new Date()));
+  const [momentoRapido, setMomentoRapido] = useState("ahora");
   const [analizandoTexto, setAnalizandoTexto] = useState(false);
   const [resultadoIaTexto, setResultadoIaTexto] = useState(null);
   const [porcionTexto, setPorcionTexto] = useState("todo");
@@ -231,12 +244,18 @@ export function NewMealDrawer({
 
   const inputCamaraRef = useRef(null);
   const inputGaleriaRef = useRef(null);
+  const drawerAbiertoRef = useRef(false);
 
   // Sincronizar con el modelo activo global cada vez que se abre el drawer o cambia la prop
   useEffect(() => {
     if (abierto) {
       setModeloActual(modeloProp || obtenerModeloSeleccionado());
+      if (!drawerAbiertoRef.current) {
+        setFechaComidaTexto(fechaHoraLocalInput(new Date()));
+        setMomentoRapido("ahora");
+      }
     }
+    drawerAbiertoRef.current = abierto;
   }, [abierto, modeloProp]);
 
   function manejarCambioModelo(nuevoModelo) {
@@ -334,6 +353,7 @@ export function NewMealDrawer({
       const resultado = await analizarTextoComida({
         descripcion: descripcionTexto,
         detallesAdicionales: detallesTexto,
+        fechaComida: fechaComidaTexto.replace("T", " "),
         modelo: modeloUsar
       });
       setResultadoIaTexto(resultado);
@@ -364,6 +384,19 @@ export function NewMealDrawer({
     setFactorTexto(1);
     setEditorTextoAbierto(false);
     setErrorTexto(null);
+  }
+
+  function seleccionarMomentoRapido(opcion) {
+    const fecha = new Date();
+    if (opcion === "hora") fecha.setHours(fecha.getHours() - 1);
+    if (opcion === "manana") fecha.setHours(8, 0, 0, 0);
+    if (opcion === "mediodia") fecha.setHours(12, 0, 0, 0);
+    if (opcion === "anoche") {
+      fecha.setDate(fecha.getDate() - 1);
+      fecha.setHours(20, 0, 0, 0);
+    }
+    setMomentoRapido(opcion);
+    setFechaComidaTexto(fechaHoraLocalInput(fecha));
   }
 
   function aplicarPorcionFoto(tipo, factor) {
@@ -441,7 +474,7 @@ export function NewMealDrawer({
 
   return (
     <div className="drawer-wrap">
-      <div className={`drawer photo-drawer ${resultadoIa || resultadoIaTexto ? "analysis-result-drawer" : ""}`}>
+      <div className={`drawer photo-drawer ${resultadoIa || resultadoIaTexto ? "analysis-result-drawer" : ""} ${pestana === "texto" && !resultadoIaTexto ? "text-compose-drawer" : ""}`}>
         <div className="drawer-header">
           <h2>Cargar comida</h2>
           <button className="drawer-close" onClick={onCerrar} aria-label="Cerrar">✕</button>
@@ -733,7 +766,7 @@ export function NewMealDrawer({
                   <div>
                     <h3 className="text-prompt-title">Describe lo que consumiste</h3>
                     <p className="text-prompt-sub">
-                      Ideal para cuando estás en la calle o sin foto. La IA estimará porciones, ingredientes y calorías estimadas.
+                      Escribí una frase o una descripción detallada. Estimamos lo que falte y respetamos las cantidades que indiques.
                     </p>
                   </div>
                 </div>
@@ -783,16 +816,48 @@ export function NewMealDrawer({
                   />
                 </div>
 
-                {!analizandoTexto && (
-                  <button
-                    type="button"
-                    className="primary analyze-btn"
-                    onClick={() => ejecutarAnalisisTexto()}
-                    disabled={!isGeminiConfigured || !descripcionTexto.trim()}
-                  >
-                      Estimar comida
-                  </button>
-                )}
+                <fieldset className="meal-time-picker">
+                  <legend>¿Cuándo comiste?</legend>
+                  <div className="meal-time-options">
+                    {[
+                      ["ahora", "Ahora"], ["hora", "Hace 1 h"], ["manana", "Esta mañana"],
+                      ["mediodia", "Mediodía"], ["anoche", "Anoche"], ["elegir", "Elegir fecha y hora"]
+                    ].map(([id, etiqueta]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        className={momentoRapido === id || (id === "elegir" && momentoRapido === "personalizado") ? "selected" : ""}
+                        aria-pressed={momentoRapido === id || (id === "elegir" && momentoRapido === "personalizado")}
+                        onClick={() => id === "elegir" ? setMomentoRapido("elegir") : seleccionarMomentoRapido(id)}
+                        disabled={analizandoTexto}
+                      >
+                        {etiqueta}
+                      </button>
+                    ))}
+                  </div>
+                  {(momentoRapido === "elegir" || momentoRapido === "personalizado") && (
+                    <input
+                      type="datetime-local"
+                      aria-label="Elegir fecha y hora de la comida"
+                      value={fechaComidaTexto}
+                      onChange={(evento) => { setFechaComidaTexto(evento.target.value); setMomentoRapido("personalizado"); }}
+                      disabled={analizandoTexto}
+                    />
+                  )}
+                </fieldset>
+
+                <div className="text-analyze-sticky">
+                  {!analizandoTexto && (
+                    <button
+                      type="button"
+                      className="primary analyze-btn"
+                      onClick={() => ejecutarAnalisisTexto()}
+                      disabled={!isGeminiConfigured || !descripcionTexto.trim()}
+                    >
+                      Analizar
+                    </button>
+                  )}
+                </div>
 
                 {analizandoTexto && (
                   <div className="analyzing-status">
@@ -817,6 +882,7 @@ export function NewMealDrawer({
                     </button>
                   </div>
                   <p className="query-content">“{descripcionTexto}”</p>
+                  <p className="query-sub">Registrada para: {fechaHoraLegible(fechaComidaTexto)}</p>
                   {detallesTexto.trim() && (
                     <p className="query-sub">Detalle: {detallesTexto}</p>
                   )}
@@ -871,7 +937,7 @@ export function NewMealDrawer({
                     {/* Desglose de ingredientes */}
                     {resultadoIaTexto.ingredientes && resultadoIaTexto.ingredientes.length > 0 && (
                       <div className="ia-ingredients-list">
-                        <small className="ingredients-title">Ingredientes estimados:</small>
+                        <small className="ingredients-title">Ingredientes:</small>
                         <ul>
                           {resultadoIaTexto.ingredientes.map((ing, idx) => (
                             <li key={idx}>
@@ -879,7 +945,7 @@ export function NewMealDrawer({
                                 {Number(ing.cantidad) > 1 && <b className="ingredient-count">{ing.cantidad}×</b>}
                                 {confianzaNormalizada(ing.confianza) === "baja" && <span className="low-confidence-mark" aria-label="Confianza baja; revisar"><i /> Revisar</span>}
                                 {ing.nombre}
-                                {ing.supuesto && <em className="supuesto-badge"> (supuesto)</em>}
+                                <em className={`ingredient-origin origin-${ing.origen === "usuario" ? "usuario" : "inferido"}`}>{ing.origen === "usuario" ? "indicado" : "estimado"}</em>
                               </span>
                               <b>{ing.peso_estimado_g ? `${ing.peso_estimado_g}g` : ""} · {ing.calorias ?? 0} kcal</b>
                             </li>
