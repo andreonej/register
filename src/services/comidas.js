@@ -67,6 +67,11 @@ export async function crearComida(registro, perfilId = null) {
     proteinas_g: ingrediente.proteinas_g ?? null,
     carbohidratos_g: ingrediente.carbohidratos_g ?? null,
     grasas_g: ingrediente.grasas_g ?? null,
+    cantidad: Math.max(1, Math.round(Number(ingrediente.cantidad) || 1)),
+    alias: ingrediente.alias || null,
+    confianza: ["alta", "media", "baja"].includes(String(ingrediente.confianza || "").toLowerCase())
+      ? String(ingrediente.confianza).toLowerCase()
+      : null,
     supuesto: Boolean(ingrediente.supuesto),
     grupo_nutricional: ingrediente.grupo_nutricional || getNutrientGroup(ingrediente.nombre)
   }));
