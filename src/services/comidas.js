@@ -92,3 +92,21 @@ export async function eliminarComida(comida) {
     console.warn("La comida se eliminó, pero quedó una foto pendiente de limpiar:", error.message);
   }
 }
+
+export async function actualizarComida(comida, ingredientes) {
+  validarConfiguracion();
+  const totales = ingredientes.reduce((suma, item) => ({
+    calorias_totales: suma.calorias_totales + Number(item.calorias || 0),
+    proteinas_totales_g: suma.proteinas_totales_g + Number(item.proteinas_g || 0),
+    carbohidratos_totales_g: suma.carbohidratos_totales_g + Number(item.carbohidratos_g || 0),
+    grasas_totales_g: suma.grasas_totales_g + Number(item.grasas_g || 0),
+  }), { calorias_totales: 0, proteinas_totales_g: 0, carbohidratos_totales_g: 0, grasas_totales_g: 0 });
+  const respuesta = await fetch(`${supabaseApiUrl}/comidas?id=eq.${comida.id}`, { method: "PATCH", headers: { ...supabaseHeaders, Prefer: "return=minimal" }, body: JSON.stringify(totales) });
+  if (!respuesta.ok) throw new Error("No se pudieron guardar los totales de la comida");
+  for (const ingrediente of ingredientes) {
+    if (!ingrediente.id) continue;
+    const actualizacion = await fetch(`${supabaseApiUrl}/comida_ingredientes?id=eq.${ingrediente.id}`, { method: "PATCH", headers: { ...supabaseHeaders, Prefer: "return=minimal" }, body: JSON.stringify({ peso_estimado_g: Number(ingrediente.peso_estimado_g), calorias: Number(ingrediente.calorias), proteinas_g: Number(ingrediente.proteinas_g), carbohidratos_g: Number(ingrediente.carbohidratos_g), grasas_g: Number(ingrediente.grasas_g) }) });
+    if (!actualizacion.ok) throw new Error("No se pudieron guardar los ingredientes");
+  }
+  return { ...comida, ...totales, comida_ingredientes: ingredientes };
+}

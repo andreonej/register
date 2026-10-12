@@ -6,7 +6,7 @@ import { NewMealDrawer } from "./components/NewMealDrawer";
 import { ProfileView } from "./components/ProfileView";
 import { agruparPorDia, fechaLocalDia, formatoDia } from "./lib/date";
 import { calcularObjetivosNutricionales } from "./lib/metabolismo";
-import { crearComida, eliminarComida, obtenerComidas } from "./services/comidas";
+import { actualizarComida, crearComida, eliminarComida, obtenerComidas } from "./services/comidas";
 import { obtenerPerfilActivo, obtenerHistorialPesos } from "./services/perfil";
 import { obtenerModeloSeleccionado, guardarModeloSeleccionado } from "./services/gemini";
 import "./App.css";
@@ -48,8 +48,11 @@ export default function DiarioComidas() {
   const [confirmandoId, setConfirmandoId] = useState(null);
   const [avisoGuardado, setAvisoGuardado] = useState(null);
   const avisoGuardadoTimer = useRef(null);
+  const [comidaPendienteBorrar, setComidaPendienteBorrar] = useState(null);
+  const borrarTimer = useRef(null);
+  const [mesCalendario, setMesCalendario] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
-  useEffect(() => () => clearTimeout(avisoGuardadoTimer.current), []);
+  useEffect(() => () => { clearTimeout(avisoGuardadoTimer.current); clearTimeout(borrarTimer.current); }, []);
 
   async function cargarDatosIniciales() {
     setCargando(true);
@@ -196,10 +199,25 @@ export default function DiarioComidas() {
   }
 
   async function borrarComida(comida) {
+    clearTimeout(borrarTimer.current);
+    setComidaPendienteBorrar(comida);
+    setConfirmandoId(null);
+    borrarTimer.current = setTimeout(async () => {
+      try { await eliminarComida(comida); setComidas((actuales) => actuales.filter((actual) => actual.id !== comida.id)); }
+      catch (err) { setError(err.message); }
+      setComidaPendienteBorrar(null);
+    }, 5000);
+  }
+
+  function deshacerBorrado() {
+    clearTimeout(borrarTimer.current);
+    setComidaPendienteBorrar(null);
+  }
+
+  async function guardarEdicion(comida, ingredientes) {
     try {
-      await eliminarComida(comida);
-      setComidas((actuales) => actuales.filter((actual) => actual.id !== comida.id));
-      setConfirmandoId(null);
+      const actualizada = await actualizarComida(comida, ingredientes);
+      setComidas((actuales) => actuales.map((item) => item.id === comida.id ? actualizada : item));
     } catch (err) {
       setError(err.message);
     }
@@ -218,7 +236,7 @@ export default function DiarioComidas() {
     }
   }
 
-  const comidasDelDia = useMemo(() => comidas.filter((comida) => fechaLocalDia(comida.fecha) === diaSeleccionado), [comidas, diaSeleccionado]);
+  const comidasDelDia = useMemo(() => comidas.filter((comida) => fechaLocalDia(comida.fecha) === diaSeleccionado && comida.id !== comidaPendienteBorrar?.id), [comidas, diaSeleccionado, comidaPendienteBorrar]);
   const totales = useMemo(() => comidasDelDia.reduce((total, comida) => ({
     calorias: total.calorias + Number(comida.calorias_totales || 0),
     proteinas: total.proteinas + Number(comida.proteinas_totales_g || 0),
@@ -229,7 +247,14 @@ export default function DiarioComidas() {
   const hoy = fechaLocalDia(new Date());
   const diasNavegacion = Array.from({ length: 7 }, (_, indice) => moverDia(diaSeleccionado, indice - 3));
   const etiquetaDia = diaSeleccionado === hoy ? "Hoy" : formatoDia(diaSeleccionado);
-  const gruposHistoricos = useMemo(() => agruparPorDia(comidas), [comidas]);
+  const gruposHistoricos = useMemo(() => agruparPorDia(comidas.filter((comida) => comida.id !== comidaPendienteBorrar?.id)), [comidas, comidaPendienteBorrar]);
+  const porDia = useMemo(() => comidas.reduce((mapa, comida) => { const dia = fechaLocalDia(comida.fecha); mapa[dia] = (mapa[dia] || 0) + Number(comida.calorias_totales || 0); return mapa; }, {}), [comidas]);
+  const gruposFranja = useMemo(() => {
+    const orden = ["Desayuno", "Almuerzo", "Merienda", "Cena", "Otros"];
+    const grupos = new Map(orden.map((nombre) => [nombre, []]));
+    comidasDelDia.forEach((comida) => grupos.get(franjaHoraria(new Date(comida.fecha))).push(comida));
+    return orden.map((nombre) => [nombre, grupos.get(nombre)]).filter(([, items]) => items.length);
+  }, [comidasDelDia]);
   const renderComida = (comida) => (
     <MealRow
       key={comida.id}
@@ -240,6 +265,8 @@ export default function DiarioComidas() {
       onConfirmar={() => setConfirmandoId(comida.id)}
       onCancelar={() => setConfirmandoId(null)}
       onBorrar={() => borrarComida(comida)}
+      onEditar={() => setExpandido(comida.id)}
+      onGuardarEdicion={(ingredientes) => guardarEdicion(comida, ingredientes)}
     />
   );
 
@@ -254,10 +281,10 @@ export default function DiarioComidas() {
         <header className="topbar">
           <div>
             <p>
-              {vista === "diario" ? etiquetaDia : vista === "historial" ? "Todos tus registros" : vista === "perfil" ? "Ajustes y métricas" : "Tu evolución"}
+              {vista === "diario" ? etiquetaDia : vista === "historial" ? "Todos tus registros" : vista === "perfil" ? "Ajustes y métricas" : vista === "calendario" ? "Registro diario" : "Tu evolución"}
             </p>
             <h1>
-              {vista === "diario" ? "Tu día" : vista === "historial" ? "Historial" : vista === "perfil" ? "Perfil" : "Health insights"}
+              {vista === "diario" ? "Tu día" : vista === "historial" ? "Historial" : vista === "perfil" ? "Perfil" : vista === "calendario" ? "Calendario" : "Health insights"}
               {vista === "diario" && diaSeleccionado !== hoy && (
                 <button className="today-pill" onClick={() => setDiaSeleccionado(hoy)} aria-label="Volver a hoy">← Hoy</button>
               )}
@@ -267,17 +294,28 @@ export default function DiarioComidas() {
             <button className="back-button" onClick={() => setVista("panel")} aria-label="Volver a progreso">‹</button>
           ) : vista === "perfil" ? (
             <button className="back-button" onClick={() => setVista("diario")} aria-label="Volver al diario">‹</button>
+          ) : vista === "calendario" ? (
+            <button className="back-button" onClick={() => setVista("diario")} aria-label="Volver al diario">‹</button>
           ) : (
-            <button
-              className="avatar"
-              onClick={() => setVista("perfil")}
-              aria-label="Ver perfil de usuario"
-              title="Abrir perfil de usuario"
-            >
-              {perfil?.nombre ? perfil.nombre.charAt(0).toUpperCase() : "●"}
-            </button>
+            <div className="topbar-actions">
+              {vista === "diario" && <button className="calendar-button" onClick={() => { setMesCalendario(new Date(`${diaSeleccionado}T12:00:00`)); setVista("calendario"); }} aria-label="Abrir calendario mensual" title="Calendario"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></button>}
+              <button className="avatar" onClick={() => setVista("perfil")} aria-label="Ver perfil de usuario" title="Abrir perfil de usuario">
+                {perfil?.nombre ? perfil.nombre.charAt(0).toUpperCase() : "●"}
+              </button>
+            </div>
           )}
         </header>
+
+        {vista === "calendario" && (() => {
+          const inicio = new Date(mesCalendario.getFullYear(), mesCalendario.getMonth(), 1);
+          const diasMes = new Date(mesCalendario.getFullYear(), mesCalendario.getMonth() + 1, 0).getDate();
+          const desplazamiento = (inicio.getDay() + 6) % 7;
+          return <section className="monthly-calendar">
+            <div className="calendar-month-heading"><button onClick={() => setMesCalendario(new Date(mesCalendario.getFullYear(), mesCalendario.getMonth() - 1, 1))} aria-label="Mes anterior">‹</button><h2>{mesCalendario.toLocaleDateString("es-AR", { month: "long", year: "numeric" })}</h2><button onClick={() => setMesCalendario(new Date(mesCalendario.getFullYear(), mesCalendario.getMonth() + 1, 1))} aria-label="Mes siguiente">›</button></div>
+            <div className="calendar-grid">{"LMXJVSD".split("").map((dia, i) => <b key={i}>{dia}</b>)}{Array.from({ length: desplazamiento }, (_, i) => <span key={`blank-${i}`} />)}{Array.from({ length: diasMes }, (_, i) => { const dia = `${mesCalendario.getFullYear()}-${String(mesCalendario.getMonth() + 1).padStart(2, "0")}-${String(i + 1).padStart(2, "0")}`; const calorias = porDia[dia]; const clase = calorias == null ? "" : calorias < objetivos.calorias * .9 ? "below" : calorias > objetivos.calorias * 1.1 ? "above" : "in-range"; return <button key={dia} className={`${dia === diaSeleccionado ? "selected" : ""} ${clase}`} onClick={() => { setDiaSeleccionado(dia); setVista("diario"); }}>{i + 1}{clase && <i />}</button>; })}</div>
+            <p className="calendar-legend"><span className="in-range" /> En banda <span className="below" /> Por debajo <span className="above" /> Por encima</p>
+          </section>;
+        })()}
 
         {vista === "diario" && (
           <section className="date-picker" aria-label="Seleccionar día">
@@ -293,6 +331,7 @@ export default function DiarioComidas() {
                   >
                     <small>{fecha.semana}</small>
                     <b>{fecha.numero}</b>
+                    {porDia[dia] != null && <i className={`day-status ${porDia[dia] < objetivos.calorias * .9 ? "below" : porDia[dia] > objetivos.calorias * 1.1 ? "above" : "in-range"}`} />}
                   </button>
                 );
               })}
@@ -306,7 +345,7 @@ export default function DiarioComidas() {
 
         {cargando ? (
           <p className="empty-state">Cargando registros…</p>
-        ) : vista === "perfil" ? (
+        ) : vista === "calendario" ? null : vista === "perfil" ? (
           <ProfileView
             perfil={perfil || {}}
             historialPesos={historialPesos}
@@ -360,19 +399,22 @@ export default function DiarioComidas() {
                 </span>
               </div>
               <div className="rings">
-                <MacroRing etiqueta="Calorías" valor={totales.calorias} maximo={objetivos.calorias} unidad="" />
                 <MacroRing etiqueta="Proteína" valor={totales.proteinas} maximo={objetivos.proteinas} color={COLORES_MACROS.proteinas} />
                 <MacroRing etiqueta="Carbos" valor={totales.carbohidratos} maximo={objetivos.carbohidratos} color={COLORES_MACROS.carbohidratos} />
                 <MacroRing etiqueta="Grasas" valor={totales.grasas} maximo={objetivos.grasas} color={COLORES_MACROS.grasas} />
               </div>
             </section>
 
+            {diaSeleccionado === hoy && totales.proteinas < objetivos.proteinas * 0.85 && (
+              <section className="gap-today-card"><strong>Cierre de brecha</strong><p>Te faltan {Math.round(objetivos.proteinas - totales.proteinas)} g de proteína para tu objetivo. Tus alimentos habituales con proteína pueden ayudarte a completarlo.</p></section>
+            )}
+
             <section className="meal-section">
               <div className="list-title">
                 <h2>Comidas</h2>
                 <span>{comidasDelDia.length} registradas</span>
               </div>
-              {comidasDelDia.length ? comidasDelDia.map(renderComida) : <p className="empty-state">No hay comidas registradas este día.</p>}
+              {comidasDelDia.length ? gruposFranja.map(([franja, items]) => <section className="meal-time-group" key={franja}><div className="meal-time-heading"><h3>{franja}</h3><span>Subtotal · {Math.round(items.reduce((suma, item) => suma + Number(item.calorias_totales || 0), 0))} kcal</span></div>{items.map(renderComida)}</section>) : <p className="empty-state">No hay comidas registradas este día.</p>}
             </section>
           </>
         )}
@@ -402,6 +444,8 @@ export default function DiarioComidas() {
           </section>
         </div>
       )}
+
+      {comidaPendienteBorrar && <div className="undo-toast" role="status">Se eliminará en unos segundos <button onClick={deshacerBorrado}>Deshacer</button></div>}
 
       <nav className="bottom-nav" aria-label="Navegación principal">
         <button

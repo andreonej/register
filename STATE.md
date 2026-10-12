@@ -2,7 +2,7 @@
 
 ## Etapa actual
 
-Etapa 6 — Entrada rápida y atajos; implementación lista, validación manual pendiente.
+Etapa 7 — Pantalla Hoy; implementación en curso, validación manual pendiente.
 
 ## Hecho
 
@@ -38,6 +38,11 @@ Etapa 6 — Entrada rápida y atajos; implementación lista, validación manual 
 - La pestaña Describir reemplaza ejemplos genéricos por hasta cuatro comidas reales agrupadas por nombre y franja horaria, ordenadas por frecuencia y franja actual.
 - Tocar una comida frecuente la registra directamente desde los datos cargados, sin llamar al modelo; “Ajustar porción” permite elegir fracción antes de registrar. Repetir reciente clona la última comida como un registro nuevo.
 - La foto usa un icono de cámara de línea. No se requiere un cambio de esquema.
+- Etapa 6 validada manualmente por el usuario; confirmó que las pruebas funcionaron bien.
+- Etapa 7: los anillos de macros muestran consumido/meta y señalan el exceso; calorías mantiene una sola representación principal.
+- Etapa 7: los días muestran estado nutricional, las comidas se agrupan por franja con subtotales y muestran miniatura, título de hasta dos líneas y macros con mayor contraste.
+- Etapa 7: el calendario mensual permite navegar por días y conserva acceso independiente al historial completo desde Progreso.
+- Etapa 7: el detalle permite corregir valores de ingredientes; el borrado tiene una ventana de cinco segundos para deshacer. El cierre de brecha se muestra en Hoy cuando falta al menos 15 % de la meta de proteína.
 
 ## Decisiones
 
@@ -74,14 +79,24 @@ Etapa 6 — Entrada rápida y atajos; implementación lista, validación manual 
 - Verificación técnica etapa 3: `npm run build` correcto y prueba manual confirmada por el usuario. Consulta REST posterior confirmó que `factor_porcion` existe en Supabase.
 - Verificación técnica etapa 4: `npm run build` y `git diff --check` correctos. REST confirmó presentes `cantidad`, `alias` y `confianza`; pruebas manuales confirmadas por el usuario.
 - Verificación técnica etapa 5: `npm run build` y `git diff --check` correctos; el usuario confirmó validación manual exitosa.
-- Verificación técnica etapa 6: `npm run build` y `git diff --check` correctos. Falta probar cámara/permiso y cancelación desde el dispositivo, y confirmar visualmente atajos y registro sin llamada al modelo.
-- Siguiente paso exacto: probar menú +, análisis automático/cancelación con cámara, atajo frecuente, ajuste de porción y Repetir reciente; comprobar en el registro que cada acción crea una comida nueva y que los atajos no invocan el modelo.
+- Verificación técnica etapa 6: `npm run build` correcto; validación manual confirmada por el usuario.
+- Verificación técnica etapa 7: `npm run build` correcto. Falta la validación manual de anillos, navegación/calendario, grupos y subtotales, edición y acción Deshacer.
+- Siguiente paso exacto: probar en móvil el calendario y los indicadores de estado; verificar miniaturas y fallback, edición de valores, gesto a la izquierda y Deshacer antes de cinco segundos, gesto a la derecha y cierre de brecha.
 - Pendiente de aclarar en otra sesión: obtener o agregar el SQL de creación inicial de `comidas` y `comida_ingredientes` para documentar su esquema desplegado completo.
 
-## Cómo probar la etapa actual
+## Cómo probar la etapa anterior
 
 1. Pulsar + y confirmar que aparecen Cámara, Galería, Describir y Repetir reciente.
 2. Seleccionar Cámara, tomar una foto y confirmar que el análisis empieza sin otro toque; probar también Cancelar durante el progreso.
 3. Abrir Describir y verificar que los atajos corresponden a comidas del historial, ordenados por frecuencia/franja.
 4. Tocar un atajo frecuente y confirmar que guarda una comida nueva al instante sin petición al modelo; repetir con Ajustar porción.
 5. Elegir Repetir reciente y confirmar que crea otro registro nuevo sin análisis.
+
+## Cómo probar la etapa actual
+
+1. Revisar que cada anillo muestre consumido/meta y que el exceso cambie a naranja, mientras el resumen de kcal no duplica otro anillo.
+2. Cambiar días; confirmar el punto de estado bajo los días con datos y los colores del calendario mensual.
+3. Revisar comidas agrupadas por franja, subtotales, miniatura (o icono sin foto), título y contraste de P/C/G.
+4. Abrir detalle, editar valores de ingrediente y guardar; confirmar los totales actualizados.
+5. Deslizar una comida a la izquierda y pulsar Deshacer antes de cinco segundos; confirmar que sigue en el registro. Probar el gesto a la derecha para abrir edición.
+6. En Hoy, confirmar que Cierre de brecha aparece solo si falta proteína relevante.

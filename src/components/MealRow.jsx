@@ -1,31 +1,38 @@
+import { useEffect, useState } from "react";
 import { formatoHora } from "../lib/date";
 import { MealIcon } from "./MealIcon";
 import { obtenerUrlFotoComida } from "../services/fotos";
 
-export function MealRow({ comida, abierta, confirmando, onToggle, onConfirmar, onCancelar, onBorrar }) {
+export function MealRow({ comida, abierta, confirmando, onToggle, onConfirmar, onCancelar, onBorrar, onEditar, onGuardarEdicion }) {
+  const [editando, setEditando] = useState(false);
+  const [ingredientesEditados, setIngredientesEditados] = useState(comida.comida_ingredientes || []);
+  useEffect(() => { setIngredientesEditados(comida.comida_ingredientes || []); }, [comida]);
   const ingredientes = comida.comida_ingredientes || [];
   const estimada = ingredientes.some((ingrediente) => ingrediente.supuesto);
   return (
     <>
-      <article className="meal-card" id={`comida-${comida.id}`}>
+      <article className="meal-card" id={`comida-${comida.id}`} onTouchStart={(event) => { event.currentTarget.dataset.touchX = event.touches[0].clientX; }} onTouchEnd={(event) => { const delta = event.changedTouches[0].clientX - Number(event.currentTarget.dataset.touchX || 0); if (Math.abs(delta) > 80) { event.preventDefault(); delta < 0 ? onBorrar() : onEditar(); } }}>
         <div className="meal-head">
           <div className="meal-icon" title={comida.comida_nombre}>
+            {comida.foto_path ? <img src={obtenerUrlFotoComida(comida.foto_path)} alt="" loading="lazy" /> :
             <MealIcon ingredientes={ingredientes} name={comida.comida_nombre} size={22} color="var(--ink)" />
+            }
           </div>
           <button className="meal-main" onClick={onToggle} aria-expanded={abierta}>
             <span>
-              <strong>{comida.comida_nombre}</strong>
+              <strong onClick={onToggle}>{comida.comida_nombre}</strong>
               <small>{formatoHora(comida.fecha)} {estimada && "· estimado"}</small>
               <em>P {Math.round(comida.proteinas_totales_g || 0)}g &nbsp; C {Math.round(comida.carbohidratos_totales_g || 0)}g &nbsp; G {Math.round(comida.grasas_totales_g || 0)}g</em>
             </span>
           </button>
           <div className="meal-meta">
             <b>{Math.round(comida.calorias_totales)}<small> kcal</small></b>
-            <button className="delete-button" onClick={onConfirmar} aria-label={`Opciones para ${comida.comida_nombre}`} aria-expanded={confirmando}>•••</button>
+              <button className="delete-button" onClick={onConfirmar} aria-label={`Opciones para ${comida.comida_nombre}`} aria-expanded={confirmando}>•••</button>
           </div>
         </div>
         {abierta && (
           <div className="ingredients">
+            <button className="meal-edit-action" onClick={() => setEditando((valor) => !valor)}>{editando ? "Cancelar edición" : "Editar ingredientes"}</button>
             {comida.foto_path && (
               <img
                 className="meal-photo"
@@ -34,12 +41,13 @@ export function MealRow({ comida, abierta, confirmando, onToggle, onConfirmar, o
                 loading="lazy"
               />
             )}
-            {ingredientes.map((ingrediente) => (
+            {(editando ? ingredientesEditados : ingredientes).map((ingrediente, indice) => (
               <div key={ingrediente.id}>
                 <span>{Number(ingrediente.cantidad) > 1 && `${ingrediente.cantidad}× `}{ingrediente.nombre}{ingrediente.supuesto && " *"}</span>
-                <span>{ingrediente.peso_estimado_g}g · {Math.round(ingrediente.calorias)} kcal</span>
+                {editando ? <div className="ingredient-edit-fields">{[["peso_estimado_g", "g"], ["calorias", "kcal"], ["proteinas_g", "P"], ["carbohidratos_g", "C"], ["grasas_g", "G"]].map(([campo, titulo]) => <label key={campo}>{titulo}<input type="number" min="0" value={ingrediente[campo] ?? 0} onChange={(event) => setIngredientesEditados((actuales) => actuales.map((item, i) => i === indice ? { ...item, [campo]: event.target.value } : item))} /></label>)}</div> : <span>{ingrediente.peso_estimado_g}g · {Math.round(ingrediente.calorias)} kcal</span>}
               </div>
             ))}
+            {editando && <button className="meal-edit-action" onClick={async () => { await onGuardarEdicion(ingredientesEditados); setEditando(false); }}>Guardar cambios</button>}
           </div>
         )}
       </article>
