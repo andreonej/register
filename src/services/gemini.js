@@ -257,12 +257,32 @@ async function procesarRespuestaGemini(response, modeloActivo, fechaReferencia) 
   const confianzaGeneral = normalizarConfianza(parsed.confianza_general || parsed.nivel_confianza);
   parsed.confianza_general = confianzaGeneral;
   parsed.nivel_confianza = confianzaGeneral.charAt(0).toLocaleUpperCase("es-AR") + confianzaGeneral.slice(1);
-  parsed.ingredientes = Array.isArray(parsed.ingredientes) ? parsed.ingredientes.map((ingrediente) => ({
-    ...ingrediente,
-    cantidad: Math.max(1, Math.round(Number(ingrediente.cantidad) || 1)),
-    alias: typeof ingrediente.alias === "string" ? ingrediente.alias : null,
-    confianza: normalizarConfianza(ingrediente.confianza, confianzaGeneral)
-  })) : [];
+  const ingredientesNormalizados = (Array.isArray(parsed.ingredientes) ? parsed.ingredientes : []).map((ingrediente) => {
+    const partesNombre = String(ingrediente.nombre || "Ingrediente").split("/").map((parte) => parte.trim()).filter(Boolean);
+    const nombre = partesNombre[0] || "Ingrediente";
+    return {
+      ...ingrediente,
+      nombre,
+      alias: (typeof ingrediente.alias === "string" && ingrediente.alias.trim()) || partesNombre[1] || null,
+      cantidad: Math.max(1, Math.round(Number(ingrediente.cantidad) || 1)),
+      confianza: normalizarConfianza(ingrediente.confianza, confianzaGeneral)
+    };
+  });
+  const ingredientesAgrupados = new Map();
+  for (const ingrediente of ingredientesNormalizados) {
+    const clave = ingrediente.nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-AR").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const existente = ingredientesAgrupados.get(clave);
+    if (!existente) {
+      ingredientesAgrupados.set(clave, { ...ingrediente });
+      continue;
+    }
+    existente.cantidad += ingrediente.cantidad;
+    for (const campo of ["peso_estimado_g", "calorias", "proteinas_g", "carbohidratos_g", "grasas_g"]) {
+      existente[campo] = (Number(existente[campo]) || 0) + (Number(ingrediente[campo]) || 0);
+    }
+    if (existente.confianza !== ingrediente.confianza) existente.confianza = confianzaGeneral;
+  }
+  parsed.ingredientes = [...ingredientesAgrupados.values()];
   parsed.sugerencias_correccion = Array.isArray(parsed.sugerencias_correccion)
     ? [...new Set(parsed.sugerencias_correccion.filter((sugerencia) => typeof sugerencia === "string").map((sugerencia) => sugerencia.trim()).filter(Boolean))].slice(0, 6)
     : [];

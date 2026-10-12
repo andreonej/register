@@ -36,7 +36,7 @@ export function MealRow({ comida, abierta, confirmando, onToggle, onConfirmar, o
             )}
             {ingredientes.map((ingrediente) => (
               <div key={ingrediente.id}>
-                <span>{ingrediente.nombre}{ingrediente.supuesto && " *"}</span>
+                <span>{Number(ingrediente.cantidad) > 1 && `${ingrediente.cantidad}× `}{ingrediente.nombre}{ingrediente.supuesto && " *"}</span>
                 <span>{ingrediente.peso_estimado_g}g · {Math.round(ingrediente.calorias)} kcal</span>
               </div>
             ))}

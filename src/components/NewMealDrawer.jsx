@@ -50,6 +50,24 @@ function formatoConfianza(nivel) {
   return `Confianza: ${etiquetas[valor] || "media"}`;
 }
 
+function confianzaNormalizada(valor) {
+  const normalizada = String(valor || "media").trim().toLocaleLowerCase("es-AR");
+  return ["alta", "media", "baja"].includes(normalizada) ? normalizada : "media";
+}
+
+function SugerenciasCorreccion({ sugerencias = [], onSeleccionar }) {
+  if (!sugerencias.length) return null;
+  return (
+    <div className="chips-cloud contextual-chips" aria-label="Sugerencias para corregir el análisis">
+      {sugerencias.slice(0, 6).map((sugerencia) => (
+        <button key={sugerencia} type="button" className="chip-btn" onClick={() => onSeleccionar(sugerencia)}>
+          + {sugerencia}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function redondear(valor, decimales = 2) {
   const precision = 10 ** decimales;
   return Math.round((Number(valor) + Number.EPSILON) * precision) / precision;
@@ -100,7 +118,27 @@ export function cambiarGramosResultado(resultado, indice, gramos) {
   return { ...resultado, ingredientes, totales_plato: totalesDeIngredientes(ingredientes) };
 }
 
-function IngredientsEditor({ ingredientes = [], onNombre, onGramos, onEliminar, onAgregar }) {
+function cambiarCantidadResultado(resultado, indice, cantidad) {
+  if (!resultado) return resultado;
+  const ingredientes = [...(resultado.ingredientes || [])];
+  const anterior = ingredientes[indice];
+  if (!anterior) return resultado;
+  const cantidadAnterior = Math.max(1, Number(anterior.cantidad) || 1);
+  const cantidadNueva = Math.max(1, Math.round(Number(cantidad) || 1));
+  const escala = cantidadNueva / cantidadAnterior;
+  ingredientes[indice] = {
+    ...anterior,
+    cantidad: cantidadNueva,
+    peso_estimado_g: redondear(Number(anterior.peso_estimado_g || 0) * escala),
+    calorias: redondear(Number(anterior.calorias || 0) * escala),
+    proteinas_g: redondear(Number(anterior.proteinas_g || 0) * escala),
+    carbohidratos_g: redondear(Number(anterior.carbohidratos_g || 0) * escala),
+    grasas_g: redondear(Number(anterior.grasas_g || 0) * escala)
+  };
+  return { ...resultado, ingredientes, totales_plato: totalesDeIngredientes(ingredientes) };
+}
+
+function IngredientsEditor({ ingredientes = [], onNombre, onGramos, onCantidad, onEliminar, onAgregar }) {
   return (
     <div className="ingredient-editor">
       {ingredientes.map((ingrediente, indice) => (
@@ -121,6 +159,11 @@ function IngredientsEditor({ ingredientes = [], onNombre, onGramos, onEliminar, 
           </div>
           <div className="ingredient-editor-footer">
             <span>{Math.round(Number(ingrediente.calorias || 0))} kcal estimadas</span>
+            <div className="ingredient-quantity-control" aria-label={`Cantidad de ${ingrediente.nombre || "ingrediente"}`}>
+              <button type="button" aria-label={`Restar una unidad de ${ingrediente.nombre || "ingrediente"}`} onClick={() => onCantidad(indice, Math.max(1, (Number(ingrediente.cantidad) || 1) - 1))}>−</button>
+              <span>{Math.max(1, Number(ingrediente.cantidad) || 1)}×</span>
+              <button type="button" aria-label={`Sumar una unidad de ${ingrediente.nombre || "ingrediente"}`} onClick={() => onCantidad(indice, (Number(ingrediente.cantidad) || 1) + 1)}>+</button>
+            </div>
             <button type="button" className="ingredient-remove-button" aria-label={`Quitar ${ingrediente.nombre || "ingrediente"}`} onClick={() => onEliminar(indice)}>✕</button>
           </div>
         </div>
@@ -206,17 +249,6 @@ export function NewMealDrawer({
 
   if (!abierto) return null;
 
-  const SUGERENCIAS_FOTO = [
-    "Frito en aceite",
-    "Hecho al horno",
-    "A la plancha",
-    "Aceite de oliva (1 cda)",
-    "Sin aceite añadido",
-    "Con salsa / mayonesa",
-    "Con queso",
-    "Leche descremada"
-  ];
-
   const SUGERENCIAS_TEXTO = [
     "🥪 Sándwich de milanesa con lechuga y tomate",
     "🥜 Puñado de nueces y almendras (30g)",
@@ -230,21 +262,20 @@ export function NewMealDrawer({
     "🍗 Pechuga de pollo grillada con arroz"
   ];
 
-  function agregarSugerenciaFoto(sug) {
-    setDetallesAdicionales((prev) => {
-      const limpia = prev.trim();
-      if (!limpia) return sug;
-      if (limpia.toLowerCase().includes(sug.toLowerCase())) return limpia;
-      return `${limpia}, ${sug}`;
-    });
-  }
-
   function agregarSugerenciaTexto(sug) {
     setDescripcionTexto((prev) => {
       const limpia = prev.trim();
       if (!limpia) return sug;
       if (limpia.toLowerCase().includes(sug.toLowerCase())) return limpia;
       return `${limpia} + ${sug}`;
+    });
+  }
+
+  function agregarCorreccion(setDetalles, sugerencia) {
+    setDetalles((prev) => {
+      const limpia = prev.trim();
+      if (limpia.toLocaleLowerCase("es-AR").includes(sugerencia.toLocaleLowerCase("es-AR"))) return limpia;
+      return limpia ? `${limpia}; ${sugerencia}` : sugerencia;
     });
   }
 
@@ -353,6 +384,14 @@ export function NewMealDrawer({
 
   function actualizarGramosTexto(indice, gramos) {
     setResultadoIaTexto((actual) => cambiarGramosResultado(actual, indice, gramos));
+  }
+
+  function actualizarCantidadFoto(indice, cantidad) {
+    setResultadoIa((actual) => cambiarCantidadResultado(actual, indice, cantidad));
+  }
+
+  function actualizarCantidadTexto(indice, cantidad) {
+    setResultadoIaTexto((actual) => cambiarCantidadResultado(actual, indice, cantidad));
   }
 
   function actualizarNombre(setResultado, indice, nombre) {
@@ -505,18 +544,10 @@ export function NewMealDrawer({
                     value={detallesAdicionales}
                     onChange={(e) => setDetallesAdicionales(e.target.value)}
                   />
-                  <div className="chips-cloud">
-                    {SUGERENCIAS_FOTO.map((sug) => (
-                      <button
-                        key={sug}
-                        type="button"
-                        className="chip-btn"
-                        onClick={() => agregarSugerenciaFoto(sug)}
-                      >
-                        ＋ {sug}
-                      </button>
-                    ))}
-                  </div>
+                  <SugerenciasCorreccion
+                    sugerencias={resultadoIa?.sugerencias_correccion}
+                    onSeleccionar={(sugerencia) => agregarCorreccion(setDetallesAdicionales, sugerencia)}
+                  />
                   {resultadoIa && (
                     <button
                       type="button"
@@ -555,7 +586,7 @@ export function NewMealDrawer({
                         <h3>{resultadoIa.comida_nombre}</h3>
                         {resultadoIa.resumen && <p className="ia-summary">{resultadoIa.resumen}</p>}
                       </div>
-                      <span className={`confidence-tag confidence-${resultadoIa.nivel_confianza?.toLowerCase()}`}>
+                      <span className={`confidence-tag confidence-${confianzaNormalizada(resultadoIa.confianza_general || resultadoIa.nivel_confianza)}`}>
                         {formatoConfianza(resultadoIa.nivel_confianza)}
                       </span>
                     </div>
@@ -594,6 +625,8 @@ export function NewMealDrawer({
                           {resultadoIa.ingredientes.map((ing, idx) => (
                             <li key={idx}>
                               <span>
+                                {Number(ing.cantidad) > 1 && <b className="ingredient-count">{ing.cantidad}×</b>}
+                                {confianzaNormalizada(ing.confianza) === "baja" && <span className="low-confidence-mark" aria-label="Confianza baja; revisar"><i /> Revisar</span>}
                                 {ing.nombre}
                                 {ing.supuesto && <em className="supuesto-badge"> (supuesto)</em>}
                               </span>
@@ -609,6 +642,7 @@ export function NewMealDrawer({
                         ingredientes={resultadoIa.ingredientes || []}
                         onNombre={(indice, nombre) => actualizarNombre(setResultadoIa, indice, nombre)}
                         onGramos={actualizarGramosFoto}
+                        onCantidad={actualizarCantidadFoto}
                         onEliminar={(indice) => quitarIngrediente(setResultadoIa, indice)}
                         onAgregar={() => agregarIngrediente(setResultadoIa)}
                       />
@@ -803,7 +837,7 @@ export function NewMealDrawer({
                         <h3>{resultadoIaTexto.comida_nombre}</h3>
                         {resultadoIaTexto.resumen && <p className="ia-summary">{resultadoIaTexto.resumen}</p>}
                       </div>
-                    <span className={`confidence-tag confidence-${resultadoIaTexto.nivel_confianza?.toLowerCase()}`}>
+                    <span className={`confidence-tag confidence-${confianzaNormalizada(resultadoIaTexto.confianza_general || resultadoIaTexto.nivel_confianza)}`}>
                         {formatoConfianza(resultadoIaTexto.nivel_confianza)}
                       </span>
                     </div>
@@ -842,6 +876,8 @@ export function NewMealDrawer({
                           {resultadoIaTexto.ingredientes.map((ing, idx) => (
                             <li key={idx}>
                               <span>
+                                {Number(ing.cantidad) > 1 && <b className="ingredient-count">{ing.cantidad}×</b>}
+                                {confianzaNormalizada(ing.confianza) === "baja" && <span className="low-confidence-mark" aria-label="Confianza baja; revisar"><i /> Revisar</span>}
                                 {ing.nombre}
                                 {ing.supuesto && <em className="supuesto-badge"> (supuesto)</em>}
                               </span>
@@ -857,6 +893,7 @@ export function NewMealDrawer({
                         ingredientes={resultadoIaTexto.ingredientes || []}
                         onNombre={(indice, nombre) => actualizarNombre(setResultadoIaTexto, indice, nombre)}
                         onGramos={actualizarGramosTexto}
+                        onCantidad={actualizarCantidadTexto}
                         onEliminar={(indice) => quitarIngrediente(setResultadoIaTexto, indice)}
                         onAgregar={() => agregarIngrediente(setResultadoIaTexto)}
                       />
@@ -904,6 +941,10 @@ export function NewMealDrawer({
                       placeholder="Ej: era sin mayonesa"
                       value={detallesTexto}
                       onChange={(e) => setDetallesTexto(e.target.value)}
+                    />
+                    <SugerenciasCorreccion
+                      sugerencias={resultadoIaTexto.sugerencias_correccion}
+                      onSeleccionar={(sugerencia) => agregarCorreccion(setDetallesTexto, sugerencia)}
                     />
                     <button
                       type="button"
