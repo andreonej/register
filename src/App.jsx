@@ -14,6 +14,20 @@ import "./App.css";
 const diaIso = (fecha) => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
 const moverDia = (dia, cantidad) => { const fecha = new Date(`${dia}T12:00:00`); fecha.setDate(fecha.getDate() + cantidad); return diaIso(fecha); };
 const formatoNav = (dia) => { const fecha = new Date(`${dia}T12:00:00`); return { semana: fecha.toLocaleDateString("es-AR", { weekday: "short" }).replace(".", ""), numero: fecha.getDate() }; };
+const fechaHoraLocal = (fecha = new Date()) => `${diaIso(fecha)} ${String(fecha.getHours()).padStart(2, "0")}:${String(fecha.getMinutes()).padStart(2, "0")}`;
+
+function franjaHoraria(fecha) {
+  const hora = fecha.getHours();
+  if (hora >= 5 && hora < 11) return "Desayuno";
+  if (hora >= 11 && hora < 15) return "Almuerzo";
+  if (hora >= 15 && hora < 19) return "Merienda";
+  if (hora >= 19 && hora < 24) return "Cena";
+  return "Otros";
+}
+
+function normalizarNombreComida(nombre) {
+  return String(nombre || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-AR").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
 
 export default function DiarioComidas() {
   const [comidas, setComidas] = useState([]);
@@ -25,6 +39,8 @@ export default function DiarioComidas() {
   const [diaSeleccionado, setDiaSeleccionado] = useState(() => fechaLocalDia(new Date()));
   const [modeloGemini, setModeloGemini] = useState(obtenerModeloSeleccionado);
   const [panelAbierto, setPanelAbierto] = useState(false);
+  const [menuRapidoAbierto, setMenuRapidoAbierto] = useState(false);
+  const [accionInicial, setAccionInicial] = useState(null);
   const [textoJson, setTextoJson] = useState("");
   const [mensaje, setMensaje] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -80,6 +96,33 @@ export default function DiarioComidas() {
     };
   }, [perfil, pesoActual]);
 
+  const comidasFrecuentes = useMemo(() => {
+    const grupos = new Map();
+    for (const comida of comidas) {
+      const nombre = normalizarNombreComida(comida.comida_nombre);
+      const fecha = new Date(comida.fecha);
+      if (!nombre || Number.isNaN(fecha.getTime())) continue;
+      const franja = franjaHoraria(fecha);
+      const clave = `${nombre}|${franja}`;
+      const grupo = grupos.get(clave) || { clave, comida, franja, frecuencia: 0, ultimaFecha: 0 };
+      grupo.frecuencia += 1;
+      if (fecha.getTime() > grupo.ultimaFecha) {
+        grupo.comida = comida;
+        grupo.ultimaFecha = fecha.getTime();
+      }
+      grupos.set(clave, grupo);
+    }
+    const franjaActual = franjaHoraria(new Date());
+    return [...grupos.values()]
+      .sort((a, b) => Number(b.franja === franjaActual) - Number(a.franja === franjaActual) || b.frecuencia - a.frecuencia || b.ultimaFecha - a.ultimaFecha)
+      .slice(0, 4);
+  }, [comidas]);
+
+  const comidaMasReciente = useMemo(() => comidas.reduce((reciente, comida) => {
+    if (!reciente) return comida;
+    return new Date(comida.fecha).getTime() > new Date(reciente.fecha).getTime() ? comida : reciente;
+  }, null), [comidas]);
+
   async function guardarRegistro(registroObj) {
     setGuardando(true);
     setMensaje(null);
@@ -110,6 +153,46 @@ export default function DiarioComidas() {
     } finally {
       setGuardando(false);
     }
+  }
+
+  function registrarComidaExistente(comida, factor = 1) {
+    if (!comida) return;
+    const escala = (valor) => Math.round((Number(valor || 0) * factor + Number.EPSILON) * 100) / 100;
+    const fecha = fechaHoraLocal();
+    const registro = {
+      comida_nombre: comida.comida_nombre,
+      fecha,
+      nivel_confianza: comida.nivel_confianza || "Medio",
+      factor_porcion: factor,
+      totales_plato: {
+        calorias: escala(comida.calorias_totales),
+        proteinas_g: escala(comida.proteinas_totales_g),
+        carbohidratos_g: escala(comida.carbohidratos_totales_g),
+        grasas_g: escala(comida.grasas_totales_g)
+      },
+      ingredientes: (comida.comida_ingredientes || []).map((ingrediente) => ({
+        ...ingrediente,
+        cantidad: Math.max(1, Math.round((Number(ingrediente.cantidad) || 1) * factor)),
+        peso_estimado_g: escala(ingrediente.peso_estimado_g),
+        calorias: escala(ingrediente.calorias),
+        proteinas_g: escala(ingrediente.proteinas_g),
+        carbohidratos_g: escala(ingrediente.carbohidratos_g),
+        grasas_g: escala(ingrediente.grasas_g)
+      })),
+      foto: null
+    };
+    guardarRegistro(registro);
+  }
+
+  function elegirAccionRapida(accion) {
+    setMenuRapidoAbierto(false);
+    setMensaje(null);
+    if (accion === "reciente") {
+      if (comidaMasReciente) registrarComidaExistente(comidaMasReciente);
+      return;
+    }
+    setAccionInicial(accion);
+    setPanelAbierto(true);
   }
 
   async function borrarComida(comida) {
@@ -295,6 +378,31 @@ export default function DiarioComidas() {
         )}
       </div>
 
+      {menuRapidoAbierto && (
+        <div className="quick-entry-backdrop" role="presentation" onClick={() => setMenuRapidoAbierto(false)}>
+          <section className="quick-entry-sheet" role="dialog" aria-modal="true" aria-labelledby="quick-entry-title" onClick={(evento) => evento.stopPropagation()}>
+            <span className="sheet-handle" />
+            <div className="quick-entry-heading">
+              <h2 id="quick-entry-title">Cargar comida</h2>
+              <button type="button" className="drawer-close" aria-label="Cerrar menú" onClick={() => setMenuRapidoAbierto(false)}>✕</button>
+            </div>
+            <button type="button" className="quick-entry-option" onClick={() => elegirAccionRapida("camara")}>
+              <strong>Cámara</strong><span>Tomar una foto y analizar</span>
+            </button>
+            <button type="button" className="quick-entry-option" onClick={() => elegirAccionRapida("galeria")}>
+              <strong>Galería</strong><span>Elegir una foto</span>
+            </button>
+            <button type="button" className="quick-entry-option" onClick={() => elegirAccionRapida("describir")}>
+              <strong>Describir</strong><span>Escribir qué comiste</span>
+            </button>
+            <button type="button" className="quick-entry-option" disabled={!comidaMasReciente} onClick={() => elegirAccionRapida("reciente")}>
+              <strong>Repetir reciente</strong>
+              <span>{comidaMasReciente ? `${comidaMasReciente.comida_nombre} · ${Math.round(Number(comidaMasReciente.calorias_totales || 0))} kcal` : "Todavía no hay comidas guardadas"}</span>
+            </button>
+          </section>
+        </div>
+      )}
+
       <nav className="bottom-nav" aria-label="Navegación principal">
         <button
           className={vista === "diario" ? "active" : ""}
@@ -304,7 +412,7 @@ export default function DiarioComidas() {
         </button>
         <button
           className="scan-button"
-          onClick={() => { setPanelAbierto(true); setMensaje(null); }}
+          onClick={() => { setMenuRapidoAbierto(true); setMensaje(null); }}
           aria-label="Registrar comida"
         >
           ＋
@@ -332,6 +440,10 @@ export default function DiarioComidas() {
         onCambiarModelo={cambiarModelo}
         onCerrar={() => setPanelAbierto(false)}
         onGuardar={guardarRegistro}
+        accionInicial={accionInicial}
+        onAccionInicialCompletada={() => setAccionInicial(null)}
+        comidasFrecuentes={comidasFrecuentes}
+        onRegistrarComida={registrarComidaExistente}
       />
     </main>
   );
