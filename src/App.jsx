@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnalyticsPanel } from "./components/AnalyticsPanel";
 import { COLORES_MACROS, MacroRing } from "./components/MacroBar";
 import { MealRow } from "./components/MealRow";
@@ -30,6 +30,10 @@ export default function DiarioComidas() {
   const [guardando, setGuardando] = useState(false);
   const [expandido, setExpandido] = useState(null);
   const [confirmandoId, setConfirmandoId] = useState(null);
+  const [avisoGuardado, setAvisoGuardado] = useState(null);
+  const avisoGuardadoTimer = useRef(null);
+
+  useEffect(() => () => clearTimeout(avisoGuardadoTimer.current), []);
 
   async function cargarDatosIniciales() {
     setCargando(true);
@@ -82,16 +86,19 @@ export default function DiarioComidas() {
     try {
       const registro = (registroObj && typeof registroObj === "object") ? registroObj : JSON.parse(textoJson);
       const comidaGuardada = await crearComida(registro, perfil?.id);
-      setMensaje({
-        tipo: comidaGuardada.foto_error ? "error" : "ok",
-        texto: comidaGuardada.foto_error
-          ? `La comida se guardó, pero no se pudo guardar su foto: ${comidaGuardada.foto_error}`
-          : `Guardado: ${registro.comida_nombre}`,
-      });
       setTextoJson("");
       setPanelAbierto(false);
       const comidasActualizadas = await obtenerComidas();
       setComidas(comidasActualizadas);
+      const comidaVisible = comidasActualizadas.find((comida) => comida.id === comidaGuardada.id) || comidaGuardada;
+      const diaComida = fechaLocalDia(comidaVisible.fecha || registro.fecha);
+      setDiaSeleccionado(diaComida);
+      setVista("diario");
+      setAvisoGuardado({ comida: comidaVisible, calorias: Math.round(Number(comidaVisible.calorias_totales || 0)) });
+      clearTimeout(avisoGuardadoTimer.current);
+      avisoGuardadoTimer.current = setTimeout(() => setAvisoGuardado(null), 4000);
+      window.setTimeout(() => document.getElementById(`comida-${comidaVisible.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+      if (comidaGuardada.foto_error) setError(`La comida se guardó, pero no se pudo guardar su foto: ${comidaGuardada.foto_error}`);
     } catch (err) {
       setMensaje({ tipo: "error", texto: err.message.includes("JSON") ? "El texto no es un JSON válido" : err.message });
     } finally {
@@ -106,6 +113,19 @@ export default function DiarioComidas() {
       setConfirmandoId(null);
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  async function deshacerGuardado() {
+    if (!avisoGuardado) return;
+    clearTimeout(avisoGuardadoTimer.current);
+    try {
+      await eliminarComida(avisoGuardado.comida);
+      setComidas((actuales) => actuales.filter((actual) => actual.id !== avisoGuardado.comida.id));
+      setAvisoGuardado(null);
+    } catch (err) {
+      setError(err.message);
+      setAvisoGuardado(null);
     }
   }
 
@@ -285,6 +305,13 @@ export default function DiarioComidas() {
           <b>⌁</b>Progreso
         </button>
       </nav>
+
+      {avisoGuardado && (
+        <div className="save-toast" role="status" aria-live="polite">
+          <span>+{avisoGuardado.calorias} kcal añadidas</span>
+          <button type="button" onClick={deshacerGuardado}>Deshacer</button>
+        </div>
+      )}
 
       <NewMealDrawer
         abierto={panelAbierto}

@@ -1265,3 +1265,6 @@
   color: var(--muted);
 }
 
+/* Aviso breve al guardar una comida */
+.save-toast{position:fixed;z-index:12;left:50%;bottom:88px;transform:translateX(-50%);width:min(448px,calc(100% - 24px));min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:6px 8px 6px 16px;border-radius:14px;background:#20201f;color:#fff;box-shadow:0 8px 24px #0003;font-size:13px;font-weight:600}
+.save-toast button{min-width:84px;min-height:44px;padding:0 12px;border:0;border-radius:10px;background:#fff;color:#171717;font:600 12px Inter,sans-serif;cursor:pointer;touch-action:manipulation}

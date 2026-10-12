@@ -7,7 +7,7 @@ export function MealRow({ comida, abierta, confirmando, onToggle, onConfirmar, o
   const estimada = ingredientes.some((ingrediente) => ingrediente.supuesto);
   return (
     <>
-      <article className="meal-card">
+      <article className="meal-card" id={`comida-${comida.id}`}>
         <div className="meal-head">
           <div className="meal-icon" title={comida.comida_nombre}>
             <MealIcon ingredientes={ingredientes} name={comida.comida_nombre} size={22} color="var(--ink)" />
