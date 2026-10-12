@@ -2,7 +2,7 @@
 
 ## Etapa actual
 
-Etapa 7 — Pantalla Hoy; implementación en curso, validación manual pendiente.
+Etapa 8 — Progreso y cierre de brecha; implementación en curso, validación manual pendiente.
 
 ## Hecho
 
@@ -43,6 +43,7 @@ Etapa 7 — Pantalla Hoy; implementación en curso, validación manual pendiente
 - Etapa 7: los días muestran estado nutricional, las comidas se agrupan por franja con subtotales y muestran miniatura, título de hasta dos líneas y macros con mayor contraste.
 - Etapa 7: el calendario mensual permite navegar por días y conserva acceso independiente al historial completo desde Progreso.
 - Etapa 7: el detalle permite corregir valores de ingredientes; el borrado tiene una ventana de cinco segundos para deshacer. El cierre de brecha se muestra en Hoy cuando falta al menos 15 % de la meta de proteína.
+- Etapa 7 validada manualmente por el usuario; confirmó que todo funciona.
 
 ## Decisiones
 
@@ -52,6 +53,7 @@ Etapa 7 — Pantalla Hoy; implementación en curso, validación manual pendiente
 - Los registros rápidos guardan una nueva comida con hora actual, ingredientes y macros copiados/escalados; no copian el `id` ni la foto del registro original.
 - Se agregó `fechaReferencia` opcional a `analizarProgreso` para poder verificar ventanas históricas de forma reproducible; en la app se usa la fecha actual.
 - La migración de fase 4 establece cantidad 1 para ingredientes antiguos, confianza NULL y alias NULL; el usuario confirmó que ya la ejecutó y probó la fase.
+- Se confirmó que la interfaz de progreso en la etapa 8 usará el historial cargado y no requiere migraciones.
 
 ## Archivos tocados
 
@@ -80,8 +82,9 @@ Etapa 7 — Pantalla Hoy; implementación en curso, validación manual pendiente
 - Verificación técnica etapa 4: `npm run build` y `git diff --check` correctos. REST confirmó presentes `cantidad`, `alias` y `confianza`; pruebas manuales confirmadas por el usuario.
 - Verificación técnica etapa 5: `npm run build` y `git diff --check` correctos; el usuario confirmó validación manual exitosa.
 - Verificación técnica etapa 6: `npm run build` correcto; validación manual confirmada por el usuario.
-- Verificación técnica etapa 7: `npm run build` correcto. Falta la validación manual de anillos, navegación/calendario, grupos y subtotales, edición y acción Deshacer.
-- Siguiente paso exacto: probar en móvil el calendario y los indicadores de estado; verificar miniaturas y fallback, edición de valores, gesto a la izquierda y Deshacer antes de cinco segundos, gesto a la derecha y cierre de brecha.
+- Verificación técnica etapa 7: `npm run build` y `git diff --check` correctos; HTTP 200. Validación manual confirmada por el usuario.
+- Etapa 8 en curso: reorganizar Progreso, agregar selector Semana/Mes con tooltip completo, filtros del ADN alimentario y sugerencias de cierre de brecha limitadas por kcal y macros restantes.
+- Siguiente paso exacto: validar ambas ventanas del gráfico, tooltip al tocar barras, filtro de categorías y sugerencias compatibles con los límites nutricionales.
 - Pendiente de aclarar en otra sesión: obtener o agregar el SQL de creación inicial de `comidas` y `comida_ingredientes` para documentar su esquema desplegado completo.
 
 ## Cómo probar la etapa anterior
@@ -92,11 +95,13 @@ Etapa 7 — Pantalla Hoy; implementación en curso, validación manual pendiente
 4. Tocar un atajo frecuente y confirmar que guarda una comida nueva al instante sin petición al modelo; repetir con Ajustar porción.
 5. Elegir Repetir reciente y confirmar que crea otro registro nuevo sin análisis.
 
+## Cómo probar la etapa anterior
+
+1. Revisar que cada anillo muestre consumido/meta, calendario y agrupación de comidas.
+2. Confirmar que editar valores se guarda y que el borrado se puede deshacer.
+
 ## Cómo probar la etapa actual
 
-1. Revisar que cada anillo muestre consumido/meta y que el exceso cambie a naranja, mientras el resumen de kcal no duplica otro anillo.
-2. Cambiar días; confirmar el punto de estado bajo los días con datos y los colores del calendario mensual.
-3. Revisar comidas agrupadas por franja, subtotales, miniatura (o icono sin foto), título y contraste de P/C/G.
-4. Abrir detalle, editar valores de ingrediente y guardar; confirmar los totales actualizados.
-5. Deslizar una comida a la izquierda y pulsar Deshacer antes de cinco segundos; confirmar que sigue en el registro. Probar el gesto a la derecha para abrir edición.
-6. En Hoy, confirmar que Cierre de brecha aparece solo si falta proteína relevante.
+1. Cambiar entre Semana y Mes y tocar barras para ver fecha, kcal y diferencia vs. meta.
+2. Revisar el ADN alimentario y filtrar sus categorías.
+3. Verificar que cada sugerencia de cierre de brecha tenga cantidad, proteína y kcal, y respete calorías, grasas y macros restantes.
