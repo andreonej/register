@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import {
   analizarFotoComida,
   analizarTextoComida,
@@ -205,6 +205,47 @@ function PortionSelector({ seleccion, onSeleccionar, onPersonalizar }) {
   );
 }
 
+function AtajosFrecuentes({ comidas = [], onRegistrar, guardando = false }) {
+  const [ajusteActivo, setAjusteActivo] = useState(null);
+  const [factorAjuste, setFactorAjuste] = useState(1);
+  if (!comidas.length) return null;
+  const opcionesPorcion = [[1, "Completa"], [0.75, "3/4"], [0.5, "Mitad"], [1 / 3, "1/3"], [0.25, "1/4"]];
+  return (
+    <section className="frequent-meals" aria-label="Comidas frecuentes">
+      <h4>Tus comidas frecuentes</h4>
+      {comidas.map((atajo) => (
+        <article className="frequent-meal" key={atajo.clave}>
+          <button type="button" className="frequent-meal-register" onClick={() => onRegistrar(atajo.comida, 1)} disabled={guardando}>
+            <strong>{atajo.comida.comida_nombre}</strong>
+            <span>{Math.round(Number(atajo.comida.calorias_totales || 0))} kcal · {atajo.frecuencia} {atajo.frecuencia === 1 ? "vez" : "veces"} · {atajo.franja.toLocaleLowerCase("es-AR")}</span>
+          </button>
+          <button
+            type="button"
+            className="frequent-meal-adjust"
+            onClick={() => { setAjusteActivo(ajusteActivo === atajo.clave ? null : atajo.clave); setFactorAjuste(1); }}
+            aria-expanded={ajusteActivo === atajo.clave}
+            disabled={guardando}
+          >
+            Ajustar porción
+          </button>
+          {ajusteActivo === atajo.clave && (
+            <div className="frequent-meal-portion">
+              <label>
+                Porción
+                <select value={factorAjuste} onChange={(evento) => setFactorAjuste(Number(evento.target.value))}>
+                  {opcionesPorcion.map(([factor, etiqueta]) => <option key={factor} value={factor}>{etiqueta}</option>)}
+                </select>
+              </label>
+              <span>{Math.round(Number(atajo.comida.calorias_totales || 0) * factorAjuste)} kcal estimadas</span>
+              <button type="button" className="primary" onClick={() => onRegistrar(atajo.comida, factorAjuste)} disabled={guardando}>Registrar</button>
+            </div>
+          )}
+        </article>
+      ))}
+    </section>
+  );
+}
+
 export function NewMealDrawer({
   abierto,
   mensaje,
@@ -212,7 +253,11 @@ export function NewMealDrawer({
   modeloActivo: modeloProp,
   onCambiarModelo,
   onCerrar,
-  onGuardar
+  onGuardar,
+  accionInicial = null,
+  onAccionInicialCompletada,
+  comidasFrecuentes = [],
+  onRegistrarComida
 }) {
   const [pestana, setPestana] = useState("foto"); // "foto" | "texto"
   
@@ -221,6 +266,7 @@ export function NewMealDrawer({
   const [imagenDatos, setImagenDatos] = useState(null);
   const [detallesAdicionales, setDetallesAdicionales] = useState("");
   const [analizando, setAnalizando] = useState(false);
+  const [analizandoAutomatico, setAnalizandoAutomatico] = useState(false);
   const [resultadoIa, setResultadoIa] = useState(null);
   const [porcionFoto, setPorcionFoto] = useState("todo");
   const [factorFoto, setFactorFoto] = useState(1);
@@ -245,6 +291,7 @@ export function NewMealDrawer({
   const inputCamaraRef = useRef(null);
   const inputGaleriaRef = useRef(null);
   const drawerAbiertoRef = useRef(false);
+  const accionInicialConsumidaRef = useRef(null);
 
   // Sincronizar con el modelo activo global cada vez que se abre el drawer o cambia la prop
   useEffect(() => {
@@ -281,6 +328,40 @@ export function NewMealDrawer({
     };
   }, [abierto]);
 
+  useLayoutEffect(() => {
+    if (!accionInicial) {
+      accionInicialConsumidaRef.current = null;
+      return undefined;
+    }
+    if (!abierto || accionInicialConsumidaRef.current === accionInicial) return undefined;
+    accionInicialConsumidaRef.current = accionInicial;
+    if (accionInicial === "describir") {
+      setPestana("texto");
+      setDescripcionTexto("");
+      setDetallesTexto("");
+      setResultadoIaTexto(null);
+      setFechaComidaTexto(fechaHoraLocalInput(new Date()));
+      setMomentoRapido("ahora");
+    } else {
+      setPestana("foto");
+      setImagenPreview(null);
+      setImagenDatos(null);
+      setResultadoIa(null);
+      setErrorLocal(null);
+      setAnalizandoAutomatico(accionInicial === "camara");
+      if (accionInicial === "camara") inputCamaraRef.current?.click();
+      if (accionInicial === "galeria") inputGaleriaRef.current?.click();
+    }
+    onAccionInicialCompletada?.();
+    return undefined;
+  }, [abierto, accionInicial]);
+
+  useEffect(() => {
+    if (!analizandoAutomatico || !imagenDatos) return;
+    setAnalizandoAutomatico(false);
+    ejecutarAnalisisFoto();
+  }, [analizandoAutomatico, imagenDatos]);
+
   function manejarCambioModelo(nuevoModelo) {
     setModeloActual(nuevoModelo);
     guardarModeloSeleccionado(nuevoModelo);
@@ -290,28 +371,6 @@ export function NewMealDrawer({
   }
 
   if (!abierto) return null;
-
-  const SUGERENCIAS_TEXTO = [
-    "🥪 Sándwich de milanesa con lechuga y tomate",
-    "🥜 Puñado de nueces y almendras (30g)",
-    "☕ Café cortado con 1 medialuna",
-    "🥟 2 empanadas de carne al horno",
-    "🍕 2 porciones de pizza muzzarella",
-    "🥗 Ensalada de atún, huevo y tomate",
-    "🍎 1 manzana mediana",
-    "🥤 Vaso de gaseosa zero",
-    "🍫 Barrita de cereal",
-    "🍗 Pechuga de pollo grillada con arroz"
-  ];
-
-  function agregarSugerenciaTexto(sug) {
-    setDescripcionTexto((prev) => {
-      const limpia = prev.trim();
-      if (!limpia) return sug;
-      if (limpia.toLowerCase().includes(sug.toLowerCase())) return limpia;
-      return `${limpia} + ${sug}`;
-    });
-  }
 
   function agregarCorreccion(setDetalles, sugerencia) {
     setDetalles((prev) => {
@@ -324,8 +383,11 @@ export function NewMealDrawer({
   async function manejarArchivo(evento) {
     const archivo = evento.target.files?.[0];
     if (!archivo) return;
+    const analizarAlCargar = evento.currentTarget === inputCamaraRef.current;
+    evento.target.value = "";
     setErrorLocal(null);
     setResultadoIa(null);
+    setAnalizandoAutomatico(analizarAlCargar);
     try {
       const procesada = await procesarImagen(archivo);
       setImagenPreview(procesada.dataUrl);
@@ -535,6 +597,7 @@ export function NewMealDrawer({
           capture="environment"
           style={{ display: "none" }}
           onChange={manejarArchivo}
+          onCancel={() => setAnalizandoAutomatico(false)}
         />
         <input
           ref={inputGaleriaRef}
@@ -542,6 +605,7 @@ export function NewMealDrawer({
           accept="image/*"
           style={{ display: "none" }}
           onChange={manejarArchivo}
+          onCancel={() => setAnalizandoAutomatico(false)}
         />
 
         {/* ========================================================= */}
@@ -557,9 +621,9 @@ export function NewMealDrawer({
 
             {!imagenPreview ? (
               <div className="photo-picker-zone">
-                <div className="photo-picker-icon">🍲</div>
+                <div className="photo-picker-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
                 <p className="photo-picker-prompt">
-                  Saca una foto a tu plato o elígela de tu galería. Nuestro agente estimará automáticamente los ingredientes, porciones y calorías.
+                  Saca una foto para comenzar el análisis automáticamente, o elige una imagen de tu galería.
                 </p>
                 <div className="photo-picker-actions">
                   <button
@@ -813,22 +877,7 @@ export function NewMealDrawer({
                     disabled={analizandoTexto}
                     autoFocus
                   />
-                  <div className="chips-section-title">
-                    <small>💡 Opciones y atajos frecuentes:</small>
-                  </div>
-                  <div className="chips-cloud">
-                    {SUGERENCIAS_TEXTO.map((sug) => (
-                      <button
-                        key={sug}
-                        type="button"
-                        className="chip-btn"
-                        onClick={() => agregarSugerenciaTexto(sug)}
-                        disabled={analizandoTexto}
-                      >
-                        ＋ {sug}
-                      </button>
-                    ))}
-                  </div>
+                  <AtajosFrecuentes comidas={comidasFrecuentes} onRegistrar={onRegistrarComida} guardando={guardando} />
                 </div>
 
                 <div className="hints-card" style={{ marginBottom: "14px" }}>
