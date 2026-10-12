@@ -10,7 +10,7 @@
 ## Carpetas y responsabilidades
 
 - `src/App.jsx`: estado y navegación principal (Hoy, Progreso, historial y perfil), carga de comidas/perfil, totales del día y guardado/eliminación.
-- `src/components/`: interfaz. `AnalyticsPanel.jsx` presenta Progreso; `NewMealDrawer.jsx` reúne carga por foto, texto y formato estructurado; `MealRow.jsx` muestra cada registro; `MacroBar.jsx` dibuja los anillos; `ProfileView.jsx` contiene perfil, peso y selección del modelo.
+- `src/components/`: interfaz. `AnalyticsPanel.jsx` presenta Progreso; `NewMealDrawer.jsx` reúne carga por foto y texto, con resultado y edición de ingredientes; `MealRow.jsx` muestra cada registro; `MacroBar.jsx` dibuja los anillos; `ProfileView.jsx` contiene perfil, peso, ajustes avanzados y selección del modelo.
 - `src/lib/`: lógica local. `progresoIntelligence.js` agrupa los últimos siete días y calcula métricas, estados, sugerencias e insights; `date.js` normaliza y agrupa fechas; `metabolismo.js` calcula metas nutricionales.
 - `src/services/`: acceso a datos y servicios externos. `comidas.js` consulta/crea/elimina comidas e ingredientes en Supabase; `gemini.js` analiza fotos y texto y persiste la selección de modelo en almacenamiento local; `fotos.js` sube/elimina imágenes; `perfil.js` gestiona perfil y pesos.
 
@@ -22,7 +22,7 @@
 
 ## Persistencia conocida por el código
 
-- Supabase REST: tabla `comidas`, relacionada con `comida_ingredientes`; la consulta carga `comidas` con `comida_ingredientes(*)`. El código de comidas usa `comidas.id`, `comida_nombre`, `fecha`, `calorias_totales`, `proteinas_totales_g`, `carbohidratos_totales_g`, `grasas_totales_g`, `nivel_confianza`, `perfil_id` y `foto_path`. Ingredientes: `comida_id`, `nombre`, `peso_estimado_g`, `calorias`, macros, `supuesto` y `grupo_nutricional`.
+- Supabase REST: tabla `comidas`, relacionada con `comida_ingredientes`; la consulta carga `comidas` con `comida_ingredientes(*)`. El código de comidas usa `comidas.id`, `comida_nombre`, `fecha`, `calorias_totales`, `proteinas_totales_g`, `carbohidratos_totales_g`, `grasas_totales_g`, `nivel_confianza`, `factor_porcion`, `perfil_id` y `foto_path`. La migración `supabase_porcion_setup.sql` agrega `factor_porcion` con valor predeterminado `1` para los registros previos. Ingredientes: `comida_id`, `nombre`, `peso_estimado_g`, `calorias`, macros, `supuesto` y `grupo_nutricional`.
 - Perfil: `perfiles`, `perfil_datos` y `peso_registros`; la estructura de perfil se crea en `supabase_perfil_setup.sql`.
 - La aplicación espera además un bucket `fotos-comidas`; `supabase_imagenes_setup.sql` agrega `foto_path` y configura el bucket. `supabase_grupo_nutricional_setup.sql` agrega `grupo_nutricional`.
 - No hay en este repositorio un SQL de creación inicial para `comidas`/`comida_ingredientes`; los campos anteriores describen el contrato que usa el cliente, no verifican el esquema desplegado.
@@ -30,5 +30,5 @@
 ## Límites actuales relevantes para las etapas
 
 - La selección de modelo está almacenada en el navegador y se expone desde el perfil.
-- El cajón de carga actualmente tiene pestañas Foto, texto y formato estructurado; el resultado y sus controles viven en `NewMealDrawer.jsx`.
+- El cajón de carga tiene pestañas Foto y Describir; la edición manual de registros estructurados está dentro de Ajustes avanzados.
 - No existe una suite de pruebas automatizadas identificada en `package.json`.

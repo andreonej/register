@@ -489,6 +489,10 @@
 .advanced-settings-content {
   padding-top: 12px;
 }
+.advanced-debug-editor{margin-top:14px;border-top:1px solid var(--border);padding-top:8px}
+.advanced-debug-editor>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:12px;font-weight:600;list-style:none}
+.advanced-debug-editor>summary::-webkit-details-marker{display:none}
+.advanced-debug-editor textarea{width:100%;margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:10px;background:#fafaf9;color:var(--ink);font:12px ui-monospace,Consolas,monospace;resize:vertical}
 
 /* Recuperación de error con cambio rápido */
 .error-recovery-box {

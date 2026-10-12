@@ -7,14 +7,6 @@ import {
 } from "../services/gemini";
 import { isGeminiConfigured } from "../config";
 
-export const EJEMPLO_REGISTRO = `{
-  "comida_nombre": "Ensalada de lentejas",
-  "fecha": "2026-09-02 12:30",
-  "ingredientes": [{ "nombre": "Lentejas cocidas", "peso_estimado_g": 150, "calorias": 170, "proteinas_g": 12, "carbohidratos_g": 28, "grasas_g": 1, "supuesto": false }],
-  "totales_plato": { "calorias": 170, "proteinas_g": 12, "carbohidratos_g": 28, "grasas_g": 1 },
-  "nivel_confianza": "Alto"
-}`;
-
 /**
  * Optimiza y comprime una imagen seleccionada para envío rápido a la API.
  */
@@ -123,7 +115,7 @@ function IngredientsEditor({ ingredientes = [], onNombre, onGramos, onEliminar, 
           </div>
           <div className="ingredient-editor-footer">
             <span>{Math.round(Number(ingrediente.calorias || 0))} kcal estimadas</span>
-            <button type="button" className="ingredient-remove-button" aria-label={`Quitar ${ingrediente.nombre || "ingrediente"}`} onClick={() => onEliminar(indice)}>Quitar</button>
+            <button type="button" className="ingredient-remove-button" aria-label={`Quitar ${ingrediente.nombre || "ingrediente"}`} onClick={() => onEliminar(indice)}>✕</button>
           </div>
         </div>
       ))}
@@ -155,16 +147,14 @@ function PortionSelector({ seleccion, onSeleccionar, onPersonalizar }) {
 
 export function NewMealDrawer({
   abierto,
-  texto,
   mensaje,
   guardando,
   modeloActivo: modeloProp,
   onCambiarModelo,
-  onTexto,
   onCerrar,
   onGuardar
 }) {
-  const [pestana, setPestana] = useState("foto"); // "foto" | "texto" | "json"
+  const [pestana, setPestana] = useState("foto"); // "foto" | "texto"
   
   // Estado para modo Foto
   const [imagenPreview, setImagenPreview] = useState(null);
@@ -427,13 +417,6 @@ export function NewMealDrawer({
             onClick={() => setPestana("texto")}
           >
             ✍️ Describir
-          </button>
-          <button
-            type="button"
-            className={`tab-button ${pestana === "json" ? "active" : ""}`}
-            onClick={() => setPestana("json")}
-          >
-            📝 Manual
           </button>
         </div>
 
@@ -969,31 +952,6 @@ export function NewMealDrawer({
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ========================================================= */}
-        {/* PESTAÑA 3: MANUAL (JSON)                                  */}
-        {/* ========================================================= */}
-        {pestana === "json" && (
-          <div className="tab-content json-tab">
-            <textarea
-              value={texto}
-              onChange={(evento) => onTexto(evento.target.value)}
-              placeholder={EJEMPLO_REGISTRO}
-              rows="9"
-            />
-            <div className="actions">
-              <button type="button" onClick={onCerrar}>Cancelar</button>
-              <button
-                type="button"
-                className="primary"
-                onClick={() => onGuardar()}
-                disabled={guardando || !texto.trim()}
-              >
-                {guardando ? "Guardando…" : "Guardar comida"}
-              </button>
-            </div>
           </div>
         )}
 

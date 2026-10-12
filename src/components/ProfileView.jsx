@@ -18,10 +18,16 @@ import {
   obtenerModeloSeleccionado,
   guardarModeloSeleccionado
 } from "../services/gemini";
+import { EJEMPLO_REGISTRO } from "../lib/registroEjemplo";
 
 export function ProfileView({
   perfil,
   historialPesos,
+  textoDebug = "",
+  mensajeDebug = null,
+  guardandoDebug = false,
+  onTextoDebug,
+  onGuardarDebug,
   modeloActivo: modeloProp,
   onCambiarModelo,
   onPerfilActualizado,
@@ -556,6 +562,22 @@ export function ProfileView({
             </div>
           )}
         </div>
+
+        <details className="advanced-debug-editor">
+          <summary>Modo de depuración</summary>
+          <p className="tools-desc">Edición manual de un registro estructurado. Usar solo para revisar datos avanzados.</p>
+          <textarea
+            aria-label="Registro estructurado de depuración"
+            value={textoDebug}
+            onChange={(evento) => onTextoDebug?.(evento.target.value)}
+            placeholder={EJEMPLO_REGISTRO}
+            rows="9"
+          />
+          {mensajeDebug && <p className={`message ${mensajeDebug.tipo}`}>{mensajeDebug.texto}</p>}
+          <button type="button" className="primary full-width" onClick={onGuardarDebug} disabled={guardandoDebug || !textoDebug.trim()}>
+            {guardandoDebug ? "Guardando…" : "Guardar registro"}
+          </button>
+        </details>
           </div>
         </details>
       </section>

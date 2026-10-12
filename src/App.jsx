@@ -227,6 +227,11 @@ export default function DiarioComidas() {
           <ProfileView
             perfil={perfil || {}}
             historialPesos={historialPesos}
+            textoDebug={textoJson}
+            mensajeDebug={mensaje}
+            guardandoDebug={guardando}
+            onTextoDebug={setTextoJson}
+            onGuardarDebug={() => guardarRegistro()}
             modeloActivo={modeloGemini}
             onCambiarModelo={cambiarModelo}
             onPerfilActualizado={(p) => setPerfil(p)}
@@ -321,12 +326,10 @@ export default function DiarioComidas() {
 
       <NewMealDrawer
         abierto={panelAbierto}
-        texto={textoJson}
         mensaje={mensaje}
         guardando={guardando}
         modeloActivo={modeloGemini}
         onCambiarModelo={cambiarModelo}
-        onTexto={setTextoJson}
         onCerrar={() => setPanelAbierto(false)}
         onGuardar={guardarRegistro}
       />
