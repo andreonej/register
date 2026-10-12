@@ -214,7 +214,7 @@ export function AnalyticsPanel({
         <div className="chart-footer-meta">
           <div className="meta-stat">
             <small>Promedio diario</small>
-            <b>{promedioCalorias} <small>kcal</small></b>
+            <b>{totalDiasRegistrados ? promedioCalorias : "—"} <small>{totalDiasRegistrados ? "kcal" : ""}</small></b>
           </div>
           <div className="meta-stat">
             <small>Días registrados</small>
@@ -250,7 +250,7 @@ export function AnalyticsPanel({
                 </div>
               </div>
             ))}
-          </div> : <p className="empty-state-mini">Ya estás cerca de tu meta. No hay una opción habitual que respete los nutrientes que te quedan hoy.</p>}
+          </div> : <p className="empty-state-mini">No hay una opción habitual que quepa en tus objetivos restantes. No hace falta forzar una sugerencia.</p>}
         </div>
       )}
 
@@ -263,7 +263,7 @@ export function AnalyticsPanel({
           </div>
         </div>
 
-        <div className="macro-breakdown-list">
+        {totalDiasRegistrados ? <div className="macro-breakdown-list">
           <MacroBarDetail
             etiqueta="Proteína"
             emoji="🥩"
@@ -286,7 +286,7 @@ export function AnalyticsPanel({
             objetivo={objetivos.grasas}
             color={COLORES_MACROS.grasas}
           />
-        </div>
+        </div> : <p className="empty-state-mini">Aún no hay días completos registrados para calcular promedios de macros.</p>}
       </div>
 
       {/* 5. Patrones de Contexto: Semana vs. Fin de semana */}

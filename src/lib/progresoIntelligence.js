@@ -139,6 +139,9 @@ export function analizarProgreso({
   let heroInfo = {};
 
   if (objetivoTipo === "bajar") {
+    const hayDiasCompletos = diasRegistrados.length > 0;
+    const diasBajo1200 = diasRegistrados.some((d) => d.calorias < 1200);
+    const diasBajoBanda = diasRegistrados.some((d) => d.calorias < pisoCalorias);
     const deficitSemanalTotal = diasRegistrados.reduce((acc, d) => acc + (tdeeUsuario - d.calorias), 0);
     const deficitPromedio = diasRegistrados.length ? Math.round(deficitSemanalTotal / diasRegistrados.length) : 0;
     const gramosGrasaEstimados = Math.round((Math.max(0, deficitSemanalTotal) / 7700) * 1000); // 7700 kcal ≈ 1kg grasa
@@ -146,33 +149,40 @@ export function analizarProgreso({
     heroInfo = {
       tipo: "bajar",
       tituloHéroe: "Déficit acumulado",
-      valorPrincipal: `${deficitSemanalTotal > 0 ? "-" : "+"}${Math.abs(deficitSemanalTotal).toLocaleString()}`,
+      valorPrincipal: hayDiasCompletos ? `${deficitSemanalTotal > 0 ? "-" : "+"}${Math.abs(deficitSemanalTotal).toLocaleString()}` : "—",
       unidadPrincipal: "kcal esta semana",
-      subtitulo: `${diasEnMeta.length} de ${diasRegistrados.length} días en banda óptima (${pisoCalorias}–${techoCalorias} kcal)`,
-      badgeTexto: deficitPromedio >= 250 ? "Ritmo Óptimo" : deficitPromedio > 0 ? "Déficit Moderado" : "Sin déficit",
-      badgeTipo: deficitPromedio >= 250 ? "exito" : "aviso",
-      detalleRitmo: deficitSemanalTotal > 0
+      subtitulo: hayDiasCompletos ? `${diasEnMeta.length} de ${diasRegistrados.length} días en banda objetivo (${pisoCalorias}–${techoCalorias} kcal)` : "Aún no hay días completos para estimar tu ritmo.",
+      badgeTexto: !hayDiasCompletos ? "Sin datos" : diasBajo1200 ? "Revisar ingesta" : deficitPromedio >= 250 ? "Ritmo sostenido" : deficitPromedio > 0 ? "Déficit moderado" : "Sin déficit",
+      badgeTipo: !hayDiasCompletos ? "neutro" : diasBajo1200 ? "alerta" : deficitPromedio >= 250 ? "exito" : "aviso",
+      detalleRitmo: !hayDiasCompletos
+        ? "Los días en curso se evalúan al completarse."
+        : deficitSemanalTotal > 0
         ? `Equivale a aprox. ${gramosGrasaEstimados}g de grasa corporal movilizada esta semana.`
         : "Esta semana el balance neto fue en equilibrio o superávit.",
-      avisoPiso: diasRegistrados.some((d) => d.estado === "por_debajo")
-        ? "Hay días con ingesta por debajo del piso saludable (1200 kcal). Cuidá no restringir de más para preservar tu masa muscular."
+      avisoPiso: diasBajo1200
+        ? "Hay días por debajo de 1200 kcal. Cuidá no restringir de más para preservar tu masa muscular."
+        : diasBajoBanda
+        ? `Hay días por debajo de tu banda objetivo (${pisoCalorias} kcal).`
         : null
     };
   } else if (objetivoTipo === "subir") {
     const superavitSemanal = diasRegistrados.reduce((acc, d) => acc + (d.calorias - tdeeUsuario), 0);
     const cumplimientoProt = objetivos.proteinas > 0 ? Math.round((promedioProteinas / objetivos.proteinas) * 100) : 100;
+    const hayDiasCompletos = diasRegistrados.length > 0;
+    const diasConSuperavit = diasRegistrados.filter((d) => d.calorias > tdeeUsuario).length;
+    const diasBajoBanda = diasRegistrados.some((d) => d.calorias < pisoCalorias);
 
     heroInfo = {
       tipo: "subir",
       tituloHéroe: "Proteína y Superávit",
-      valorPrincipal: `${promedioProteinas}g`,
+      valorPrincipal: hayDiasCompletos ? `${promedioProteinas}g` : "—",
       unidadPrincipal: `/ ${objetivos.proteinas}g prot diaria`,
-      subtitulo: `${cumplimientoProt}% de tu meta de proteína · ${diasEnMeta.length} de ${diasRegistrados.length} días con superávit`,
-      badgeTexto: cumplimientoProt >= 95 ? "Superávit Proteico" : "Requiere más proteína",
-      badgeTipo: cumplimientoProt >= 95 ? "exito" : "alerta",
-      detalleRitmo: `Superávit neto acumulado: ${superavitSemanal > 0 ? "+" : ""}${superavitSemanal} kcal esta semana.`,
-      avisoPiso: diasRegistrados.some((d) => d.estado === "por_debajo")
-        ? "En algunos días te quedaste corto del superávit calórico necesario para construcción muscular."
+      subtitulo: hayDiasCompletos ? `${cumplimientoProt}% de tu meta de proteína · ${diasConSuperavit} de ${diasRegistrados.length} días sobre tu gasto estimado` : "Aún no hay días completos para evaluar tu objetivo.",
+      badgeTexto: !hayDiasCompletos ? "Sin datos" : cumplimientoProt >= 95 ? "Proteína en objetivo" : "Revisar proteína",
+      badgeTipo: !hayDiasCompletos ? "neutro" : cumplimientoProt >= 95 ? "exito" : "alerta",
+      detalleRitmo: hayDiasCompletos ? `Balance energético neto: ${superavitSemanal > 0 ? "+" : ""}${superavitSemanal} kcal esta semana.` : "Los días en curso se evalúan al completarse.",
+      avisoPiso: diasBajoBanda
+        ? `Hay días por debajo de la banda energética para tu objetivo (${pisoCalorias} kcal).`
         : null
     };
   } else {
@@ -192,12 +202,12 @@ export function analizarProgreso({
     heroInfo = {
       tipo: "mantener",
       tituloHéroe: "Estabilidad Energética",
-      valorPrincipal: `${diasEnMeta.length} / ${diasRegistrados.length}`,
+      valorPrincipal: diasRegistrados.length ? `${diasEnMeta.length} / ${diasRegistrados.length}` : "—",
       unidadPrincipal: "días en rango",
-      subtitulo: `Desviación promedio de ±${desviacionPromedio} kcal frente a tu meta de ${objetivos.calorias} kcal`,
+      subtitulo: diasRegistrados.length ? `Desviación promedio de ±${desviacionPromedio} kcal frente a tu meta de ${objetivos.calorias} kcal` : "Aún no hay días completos para evaluar tu estabilidad.",
       badgeTexto: etiquetaEstabilidad,
       badgeTipo: etiquetaEstabilidad === "Estable" ? "exito" : etiquetaEstabilidad === "Irregular" ? "alerta" : "neutro",
-      detalleRitmo: `Promedio diario: ${promedioCalorias} kcal (Meta: ${objetivos.calorias} kcal).`,
+      detalleRitmo: diasRegistrados.length ? `Promedio diario: ${promedioCalorias} kcal (Meta: ${objetivos.calorias} kcal).` : "Los días en curso se evalúan al completarse.",
       avisoPiso: null
     };
   }
@@ -274,7 +284,11 @@ export function analizarProgreso({
       if (candidato.carbo100 > 0) limites.push(carbohidratosRestantesHoy / candidato.carbo100 * 100);
       const gramos = Math.floor(Math.min(...limites));
       if (gramos < 20) return null;
-      return { nombre: candidato.nombre, gramos, calorias: Math.floor(candidato.kcal100 * gramos / 100), proteinas: Math.floor(candidato.proteina100 * gramos / 100), grasas: Math.floor(candidato.grasa100 * gramos / 100), carbohidratos: Math.floor((candidato.carbo100 || 0) * gramos / 100) };
+      const caloriasReales = candidato.kcal100 * gramos / 100;
+      const proteinasReales = candidato.proteina100 * gramos / 100;
+      const grasasReales = candidato.grasa100 * gramos / 100;
+      const carbohidratosReales = (candidato.carbo100 || 0) * gramos / 100;
+      return { nombre: candidato.nombre, gramos, calorias: Math.floor(caloriasReales), proteinas: Math.floor(proteinasReales), grasas: Math.floor(grasasReales), carbohidratos: Math.floor(carbohidratosReales), caloriasReales, proteinasReales, grasasReales, carbohidratosReales };
     };
     candidatos.forEach((candidato) => {
       const porcion = dimensionar(candidato, proteinasFaltantesHoy);
@@ -283,8 +297,8 @@ export function analizarProgreso({
     if (candidatos.length > 1) {
       const porciones = candidatos.slice(0, 2).map((item) => dimensionar(item, proteinasFaltantesHoy / 2));
       const combinacion = porciones.filter(Boolean);
-      const kcal = combinacion.reduce((s, p) => s + p.calorias, 0), grasa = combinacion.reduce((s, p) => s + p.grasas, 0), carbos = combinacion.reduce((s, p) => s + p.carbohidratos, 0);
-      if (combinacion.length === 2 && kcal <= caloriasRestantesHoy && grasa <= grasasRestantesHoy && carbos <= carbohidratosRestantesHoy) sugerenciasBrecha.unshift({ titulo: combinacion.map((p) => `${p.gramos} g de ${p.nombre}`).join(" + "), componentes: combinacion, calorias: kcal, proteinas: combinacion.reduce((s, p) => s + p.proteinas, 0), grasas: grasa, carbohidratos: carbos, motivo: "Combinación de alimentos habituales dentro de tus objetivos restantes" });
+      const kcalReales = combinacion.reduce((s, p) => s + p.caloriasReales, 0), grasaReal = combinacion.reduce((s, p) => s + p.grasasReales, 0), carbosReales = combinacion.reduce((s, p) => s + p.carbohidratosReales, 0);
+      if (combinacion.length === 2 && kcalReales <= caloriasRestantesHoy && grasaReal <= grasasRestantesHoy && carbosReales <= carbohidratosRestantesHoy) sugerenciasBrecha.unshift({ titulo: combinacion.map((p) => `${p.gramos} g de ${p.nombre}`).join(" + "), componentes: combinacion, calorias: Math.floor(kcalReales), proteinas: combinacion.reduce((s, p) => s + p.proteinas, 0), grasas: Math.floor(grasaReal), carbohidratos: Math.floor(carbosReales), motivo: "Combinación de alimentos habituales dentro de tus objetivos restantes" });
     }
     sugerenciasBrecha.splice(5);
   }
@@ -326,7 +340,7 @@ export function analizarProgreso({
     const deficitDiarioMedio = Math.round(diasRegistrados.reduce((acc, d) => acc + (tdeeUsuario - d.calorias), 0) / diasRegistrados.length);
     if (deficitDiarioMedio > 100) {
       const kgPorMes = ((deficitDiarioMedio * 30) / 7700).toFixed(1);
-      mensajeProyeccion = `A este ritmo proyectas una pérdida de aprox. ${kgPorMes} kg/mes de forma saludable.`;
+      mensajeProyeccion = `Con el déficit medio registrado, la proyección sería de aprox. ${kgPorMes} kg/mes.`;
     }
   } else if (objetivoTipo === "subir" && diasRegistrados.length >= 3) {
     const superavitDiarioMedio = Math.round(diasRegistrados.reduce((acc, d) => acc + (d.calorias - tdeeUsuario), 0) / diasRegistrados.length);

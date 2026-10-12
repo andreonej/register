@@ -429,7 +429,7 @@ export default function DiarioComidas() {
             </section>
 
             {diaSeleccionado === hoy && objetivos.proteinas - totales.proteinas > 15 && (
-              <section className="gap-today-card"><strong>Cierre de brecha</strong>{cierreBrechaHoy.length ? <div className="gap-today-options">{cierreBrechaHoy.map((sugerencia, index) => <p key={index}><b>{sugerencia.titulo}</b><span>+{sugerencia.proteinas} g proteína · {sugerencia.calorias} kcal · {sugerencia.grasas} g grasa · {sugerencia.carbohidratos} g carbos</span></p>)}</div> : <p>Ya estás cerca de tu meta. No hay una opción habitual que quepa dentro de las kcal, grasas y macros que te quedan.</p>}</section>
+              <section className="gap-today-card"><strong>Cierre de brecha</strong>{cierreBrechaHoy.length ? <div className="gap-today-options">{cierreBrechaHoy.map((sugerencia, index) => <p key={index}><b>{sugerencia.titulo}</b><span>+{sugerencia.proteinas} g proteína · {sugerencia.calorias} kcal · {sugerencia.grasas} g grasa · {sugerencia.carbohidratos} g carbos</span></p>)}</div> : <p>No hay una opción habitual que quepa en tus objetivos restantes. No hace falta forzar una sugerencia.</p>}</section>
             )}
           </>
         )}

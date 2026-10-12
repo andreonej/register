@@ -7,6 +7,14 @@ import {
 } from "../services/gemini";
 import { isGeminiConfigured } from "../config";
 
+function mensajeErrorVisible(error) {
+  return String(error?.message || "No se pudo completar el análisis.")
+    .replace(/\bGemini\b/gi, "servicio de análisis")
+    .replace(/\bJSON\b/gi, "respuesta estructurada")
+    .replace(/\bBase de Datos\b/gi, "servicio")
+    .replace(/\s{2,}/g, " ");
+}
+
 /**
  * Optimiza y comprime una imagen seleccionada para envío rápido a la API.
  */
@@ -399,7 +407,7 @@ export function NewMealDrawer({
       setImagenDatos(procesada);
     } catch (err) {
       setAnalizandoAutomatico(false);
-      setErrorLocal("Error al cargar la imagen: " + err.message);
+      setErrorLocal("Error al cargar la imagen: " + mensajeErrorVisible(err));
     }
   }
 
@@ -427,7 +435,7 @@ export function NewMealDrawer({
       setFactorFoto(1);
       setEditorFotoAbierto(false);
     } catch (err) {
-      if (err.name !== "AbortError") setErrorLocal(err.message);
+      if (err.name !== "AbortError") setErrorLocal(mensajeErrorVisible(err));
     } finally {
       if (analisisFotoControllerRef.current === controller) analisisFotoControllerRef.current = null;
       setAnalizando(false);
@@ -464,7 +472,7 @@ export function NewMealDrawer({
       setFactorTexto(1);
       setEditorTextoAbierto(false);
     } catch (err) {
-      setErrorTexto(err.message);
+      setErrorTexto(mensajeErrorVisible(err));
     } finally {
       setAnalizandoTexto(false);
     }

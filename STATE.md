@@ -88,9 +88,14 @@ Etapa 9 — Criterios de aceptación globales; revisión en curso.
 - Cierre de brecha muestra como máximo cinco sugerencias, priorizadas por frecuencia de uso y manteniendo la combinación dentro del límite.
 - Etapa 8: para el objetivo Mantener, Progreso muestra un registro manual de peso y tendencia de los últimos 30 días con los servicios existentes.
 - Etapa 8 validada manualmente por el usuario; confirmó que funciona. También validó el límite de cinco sugerencias y la posición del bloque debajo de las comidas.
-- Etapa 9: revisión final de los cinco criterios globales de la especificación.
+- Etapa 9: textos visibles fuera de Ajustes avanzados no muestran los términos técnicos restringidos; los errores del análisis se limpian antes de aparecer en pantalla.
+- Etapa 9: el flujo de cámara inicia el análisis al recibir la foto y no añade un botón intermedio de análisis; el guardado retorna a Hoy.
+- Etapa 9: los promedios utilizan solo días completos anteriores; el día actual queda visible como en curso.
+- Etapa 9: las sugerencias limitan porciones usando kcal, grasa y carbohidratos restantes; combinaciones verifican los valores nutricionales sin redondear antes de mostrarse.
+- Etapa 9: los estados de Progreso muestran “Sin datos” cuando todavía no hay días completos y los textos de advertencia distinguen estar debajo de la banda de estar debajo de 1200 kcal.
 - Verificación técnica etapa 8: `npm run build` correcto, `git diff --check` limpio y pruebas manuales confirmadas por el usuario.
-- Siguiente paso exacto: auditar textos visibles, entrada por cámara, promedios sin el día en curso, restricciones del cierre de brecha y coherencia entre mensajes de estado.
+- Verificación técnica etapa 9: `npm run build` correcto, `git diff --check` limpio y servidor local HTTP 200. Falta la última validación manual.
+- Siguiente paso exacto: probar la captura con cámara hasta guardar; verificar en un caso de poca energía disponible que ninguna sugerencia exceda kcal/macros; revisar Progreso con días completos y sin datos para confirmar mensajes coherentes.
 - Pendiente de aclarar en otra sesión: obtener o agregar el SQL de creación inicial de `comidas` y `comida_ingredientes` para documentar su esquema desplegado completo.
 
 ## Cómo probar la etapa anterior
@@ -111,4 +116,6 @@ Etapa 9 — Criterios de aceptación globales; revisión en curso.
 1. Cambiar entre Semana y Mes y tocar barras para ver fecha, kcal y diferencia vs. meta.
 2. Revisar que el ADN excluya condimentos/aceites y que cada filtro muestre ingredientes de su categoría.
 3. Verificar que las sugerencias de Hoy/Progreso incluyan porciones concretas y no rebasen kcal, grasas ni macros restantes; revisar también el caso sin opción viable.
-4. Con objetivo Mantener, registrar un peso y comprobar que aparece en la gráfica de 30 días.
+4. Probar en móvil la ruta de foto desde + hasta guardar y confirmar que no hay un paso intermedio de “Analizar”.
+5. Revisar Progreso con días completos y sin datos, confirmando que los promedios excluyen hoy y que los estados no se contradicen.
+6. Con objetivo Mantener, registrar un peso y comprobar que aparece en la gráfica de 30 días.
