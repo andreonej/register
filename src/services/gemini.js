@@ -55,7 +55,7 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON válido (sin texto antes ni de
       "proteinas_g": 25,
       "carbohidratos_g": 0,
       "grasas_g": 10,
-      "supuesto": false,
+      "supuesto": true,
       "confianza": "alta"
     }
   ],
@@ -91,6 +91,8 @@ CONFIGURACIÓN DEL USUARIO (PERFIL NUTRICIONAL):
 
 PROCESO DE ANÁLISIS DE TEXTO:
 1. RAZONAMIENTO Y DESGLOSE:
+- La descripción y las cantidades del usuario son la fuente principal y prevalecen sobre cualquier supuesto. Respeta exactamente los gramos, unidades y porciones indicados; no agregues cantidades a esos ingredientes.
+- Para lo que falte, infiere ingredientes habituales y porciones típicas según el plato (por ejemplo, un sánguche triple puede incluir tres piezas de pan y relleno habitual). No preguntes nada: entrega la mejor estimación posible.
 - Interpreta descripciones informales o cotidianas (ej: "un sanguche de milanesa con lechuga y tomate", "un puñado de nueces y un café cortado", "2 empanadas de carne", "un plato de fideos con tuco y queso rallado").
 - Si el usuario especifica cantidades, porciones o pesos (ej: "150g de pechuga", "2 rebanadas de pan lactal", "un puñado de unos 30g"), úsalos como referencia prioritaria.
 - Si no especifica cantidades exactas, usa porciones habituales estándar de referencia (ej: puñado de frutos secos ≈ 30g, manzana mediana ≈ 150g, taza de café con leche ≈ 200ml, sándwich de jamón y queso ≈ 180-220g total, empanada estándar al horno ≈ 90-100g, etc.).
@@ -128,7 +130,8 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON válido (sin texto antes ni de
       "carbohidratos_g": 0,
       "grasas_g": 10,
       "supuesto": false,
-      "confianza": "media"
+      "confianza": "media",
+      "origen": "inferido"
     }
   ],
   "totales_plato": {
@@ -147,7 +150,7 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON válido (sin texto antes ni de
   "confianza_general": "media",
   "sugerencias_correccion": ["Sin mayonesa", "Porción chica"]
 }
-Agrupa elementos iguales o casi idénticos en un ingrediente con cantidad (por ejemplo, dos empanadas iguales: cantidad 2 y nutrientes/peso del total). No dupliques ingredientes equivalentes. Sugiere hasta 6 correcciones breves y relevantes para este plato; no uses opciones genéricas que no correspondan.
+Agrupa elementos iguales o casi idénticos en un ingrediente con cantidad (por ejemplo, dos empanadas iguales: cantidad 2 y nutrientes/peso del total). No dupliques ingredientes equivalentes. Marca cada ingrediente con origen "usuario" cuando fue nombrado o cuantificado explícitamente, y "inferido" cuando lo dedujiste. El campo "supuesto" debe reflejar si fue inferido. Sugiere hasta 6 correcciones breves y relevantes para este plato; no uses opciones genéricas que no correspondan.
 `;
 
 export const MODELOS_GEMINI = [
@@ -183,7 +186,7 @@ export function guardarModeloSeleccionado(modeloId) {
 /**
  * Procesa y valida la respuesta JSON de Gemini.
  */
-async function procesarRespuestaGemini(response, modeloActivo, fechaReferencia) {
+async function procesarRespuestaGemini(response, modeloActivo, fechaReferencia, fechaForzada = null, incluirOrigen = false) {
   if (!response.ok) {
     const errorBody = await response.text();
     let errorMsg = `Error de Gemini API (${response.status})`;
@@ -233,7 +236,9 @@ async function procesarRespuestaGemini(response, modeloActivo, fechaReferencia) 
   }
 
   // Garantizar valores por defecto coherentes
-  if (!parsed.fecha || typeof parsed.fecha !== "string" || !parsed.fecha.includes("-")) {
+  if (fechaForzada) {
+    parsed.fecha = fechaForzada;
+  } else if (!parsed.fecha || typeof parsed.fecha !== "string" || !parsed.fecha.includes("-")) {
     parsed.fecha = fechaReferencia;
   }
 
@@ -260,12 +265,19 @@ async function procesarRespuestaGemini(response, modeloActivo, fechaReferencia) 
   const ingredientesNormalizados = (Array.isArray(parsed.ingredientes) ? parsed.ingredientes : []).map((ingrediente) => {
     const partesNombre = String(ingrediente.nombre || "Ingrediente").split("/").map((parte) => parte.trim()).filter(Boolean);
     const nombre = partesNombre[0] || "Ingrediente";
+    const origen = ["usuario", "inferido"].includes(String(ingrediente.origen || "").toLowerCase())
+      ? String(ingrediente.origen).toLowerCase()
+      : "inferido";
     return {
       ...ingrediente,
       nombre,
       alias: (typeof ingrediente.alias === "string" && ingrediente.alias.trim()) || partesNombre[1] || null,
       cantidad: Math.max(1, Math.round(Number(ingrediente.cantidad) || 1)),
-      confianza: normalizarConfianza(ingrediente.confianza, confianzaGeneral)
+      confianza: normalizarConfianza(ingrediente.confianza, confianzaGeneral),
+      ...(incluirOrigen ? {
+        origen,
+        supuesto: Boolean(ingrediente.supuesto || origen === "inferido")
+      } : {})
     };
   });
   const ingredientesAgrupados = new Map();
@@ -277,6 +289,7 @@ async function procesarRespuestaGemini(response, modeloActivo, fechaReferencia) 
       continue;
     }
     existente.cantidad += ingrediente.cantidad;
+    if (ingrediente.origen === "usuario") existente.origen = "usuario";
     for (const campo of ["peso_estimado_g", "calorias", "proteinas_g", "carbohidratos_g", "grasas_g"]) {
       existente[campo] = (Number(existente[campo]) || 0) + (Number(ingrediente[campo]) || 0);
     }
@@ -366,6 +379,7 @@ export async function analizarFotoComida({
 export async function analizarTextoComida({
   descripcion,
   detallesAdicionales = "",
+  fechaComida = null,
   modelo = null
 }) {
   if (!isGeminiConfigured) {
@@ -377,10 +391,10 @@ export async function analizarTextoComida({
   }
 
   const modeloActivo = modelo || obtenerModeloSeleccionado();
-  const fechaReferencia = obtenerFechaActualLocal();
+  const fechaReferencia = fechaComida || obtenerFechaActualLocal();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloActivo}:generateContent?key=${geminiApiKey}`;
 
-  let promptUsuario = `Analiza la siguiente comida descrita por el usuario según tus instrucciones.\nFecha actual de registro: "${fechaReferencia}".\n\nDESCRIPCIÓN DE LO CONSUMIDO:\n"${descripcion.trim()}"`;
+  let promptUsuario = `Estima esta comida descrita por el usuario. No hagas preguntas. Respeta todo nombre, cantidad, unidad o gramo explícito; infiere solo lo que no se indicó.\nFecha y hora elegidas por el usuario para registrar esta comida: "${fechaReferencia}". Usa exactamente este valor en el campo fecha; no uses la hora actual.\n\nDESCRIPCIÓN DE LO CONSUMIDO:\n"${descripcion.trim()}"`;
   if (detallesAdicionales && detallesAdicionales.trim()) {
     promptUsuario += `\n\nDETALLES O ACLARACIONES ADICIONALES:\n"${detallesAdicionales.trim()}"`;
   }
@@ -413,5 +427,5 @@ export async function analizarTextoComida({
     body: JSON.stringify(payload)
   });
 
-  return procesarRespuestaGemini(response, modeloActivo, fechaReferencia);
+  return procesarRespuestaGemini(response, modeloActivo, fechaReferencia, fechaReferencia, true);
 }
