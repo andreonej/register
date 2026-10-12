@@ -2,7 +2,7 @@
 
 ## Etapa actual
 
-Etapa 2 — Pantalla de resultado y textos; implementación lista, validación manual pendiente.
+Etapa 3 — Porción e ingredientes editables; implementación lista, migración de Supabase y validación manual pendientes.
 
 ## Hecho
 
@@ -16,12 +16,16 @@ Etapa 2 — Pantalla de resultado y textos; implementación lista, validación m
 - El resultado por foto y texto muestra título, confianza legible, totales, ingredientes y acciones; la foto se ve completa en una miniatura ampliable.
 - Los controles de corrección quedan colapsados tras el análisis. “Volver a analizar” se deshabilita cuando no hay correcciones para enviar.
 - Al guardar, la app vuelve al día de la comida, desplaza hasta el registro y muestra “+N kcal añadidas” con “Deshacer” durante cuatro segundos.
+- Etapa 3: selector Todo/Mitad/1/3/Personalizado escala localmente gramos, calorías y macros, sin repetir el análisis del modelo.
+- Etapa 3: los ingredientes se pueden editar, agregar o quitar; los gramos recalculan proporcionalmente kcal/macros y los totales.
+- El editor JSON estructurado queda dentro de Perfil → Ajustes avanzados → Modo de depuración.
+- El guardado incluye `factor_porcion`; `supabase_porcion_setup.sql` agrega la columna con valor predeterminado 1 para comidas existentes.
 
 ## Decisiones
 
-- No se consultó ni modificó Supabase: esta etapa solo usa los datos que la app ya carga.
+- Se consultó Supabase solo mediante REST de lectura para verificar `factor_porcion`; la columna no existe todavía. No se insertaron ni modificaron registros.
 - Se agregó `fechaReferencia` opcional a `analizarProgreso` para poder verificar ventanas históricas de forma reproducible; en la app se usa la fecha actual.
-- No se modificó el esquema ni se insertaron datos de prueba en Supabase. El editor heredado sigue detrás del botón “Editar ingredientes” como transición; la etapa 3 lo reemplaza por edición estructurada.
+- La migración SQL está preparada, pero debe ejecutarse en el SQL Editor de Supabase antes de guardar comidas desde esta versión.
 
 ## Archivos tocados
 
@@ -35,18 +39,21 @@ Etapa 2 — Pantalla de resultado y textos; implementación lista, validación m
 - `src/components/NewMealDrawer.jsx`.
 - `src/components/ProfileView.jsx`.
 - `src/components/MealRow.jsx`.
+- `src/lib/registroEjemplo.js`.
+- `supabase_porcion_setup.sql`.
 
 ## Pendientes / siguiente paso exacto
 
 - Verificación etapa 1: `npm run build` correcto y servidor Vite responde HTTP 200. Caso controlado con domingo 11 en curso (355 kcal), seis días anteriores registrados y solo sábado como día de fin de semana completo: promedio 1167 kcal sin incluir las 355 kcal de hoy, estabilidad `1 / 6 · Irregular` y comparativa marcada insuficiente.
-- Verificación técnica etapa 2: `npm run build` correcto; servidor Vite responde HTTP 200. No hay navegador disponible en este entorno y no se insertaron registros de prueba en Supabase, por lo que falta validar visualmente el orden, la barra fija y el flujo guardar/deshacer.
-- Siguiente paso exacto: probar manualmente los cinco pasos de “Cómo probar la etapa actual”. Si pasan, marcar etapa 2 completa y recién entonces comenzar etapa 3 — porción e ingredientes editables; leer solo las secciones 3.1 y 3.3 de la especificación.
+- Verificación técnica etapa 2: `npm run build` correcto; servidor Vite responde HTTP 200. El usuario confirmó que funcionó perfectamente.
+- Verificación técnica etapa 3: `npm run build` correcto; caso determinista confirmó que Mitad escala ingredientes/macros y editar gramos recalcula kcal y totales. La consulta REST de solo lectura falló al solicitar `factor_porcion`, señal de que falta aplicar la migración.
+- Siguiente paso exacto: ejecutar `supabase_porcion_setup.sql` en Supabase y probar manualmente la etapa 3: escalar porción, cambiar gramos, agregar/quitar ingredientes, guardar y abrir una comida previa.
 - Pendiente de aclarar en otra sesión: obtener o agregar el SQL de creación inicial de `comidas` y `comida_ingredientes` para documentar su esquema desplegado completo.
 
-## Cómo probar la etapa actual
+## Cómo probar la etapa actual (tras aplicar la migración)
 
-1. Analizar una foto y confirmar el orden: miniatura completa, título/confianza, totales, ingredientes y acciones.
-2. Tocar la miniatura para ampliarla; abrir “¿Corregir algo?” y comprobar que “Volver a analizar” solo se activa con una corrección.
-3. Guardar una comida: confirmar regreso al día correspondiente, desplazamiento al registro y aviso durante cuatro segundos. Pulsar “Deshacer” y comprobar que desaparece.
-4. Abrir Perfil → Ajustes avanzados y comprobar que el modelo se cambia desde allí, no desde el modal.
-5. Confirmación técnica realizada: `npm run build` correcto y `GET /` local respondió HTTP 200. Falta confirmar los pasos visuales y el guardado/deshacer desde un navegador.
+1. Ejecutar `supabase_porcion_setup.sql` en el SQL Editor del proyecto Supabase.
+2. Analizar una foto y probar Todo, Mitad y 1/3; comprobar que los valores cambian sin volver a analizar.
+3. Elegir Personalizado, modificar gramos, agregar un ingrediente y quitar uno; confirmar que los totales se actualizan.
+4. Guardar y comprobar en el registro que se conserva la comida; abrir una comida previa y confirmar que sigue mostrando porción completa.
+5. Abrir Perfil → Ajustes avanzados → Modo de depuración para confirmar que el editor estructurado ya no aparece en el flujo normal.
