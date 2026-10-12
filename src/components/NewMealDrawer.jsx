@@ -292,6 +292,7 @@ export function NewMealDrawer({
   const inputGaleriaRef = useRef(null);
   const drawerAbiertoRef = useRef(false);
   const accionInicialConsumidaRef = useRef(null);
+  const analisisFotoControllerRef = useRef(null);
 
   // Sincronizar con el modelo activo global cada vez que se abre el drawer o cambia la prop
   useEffect(() => {
@@ -306,7 +307,11 @@ export function NewMealDrawer({
   }, [abierto, modeloProp]);
 
   useEffect(() => {
-    if (!abierto) return undefined;
+    if (!abierto) {
+      analisisFotoControllerRef.current?.abort();
+      analisisFotoControllerRef.current = null;
+      return undefined;
+    }
     const viewport = window.visualViewport;
     const ajustarAlViewport = () => {
       const alturaVisible = viewport?.height || window.innerHeight;
@@ -393,6 +398,7 @@ export function NewMealDrawer({
       setImagenPreview(procesada.dataUrl);
       setImagenDatos(procesada);
     } catch (err) {
+      setAnalizandoAutomatico(false);
       setErrorLocal("Error al cargar la imagen: " + err.message);
     }
   }
@@ -403,6 +409,9 @@ export function NewMealDrawer({
     if (modeloForzado) {
       manejarCambioModelo(modeloForzado);
     }
+    const controller = new AbortController();
+    analisisFotoControllerRef.current?.abort();
+    analisisFotoControllerRef.current = controller;
     setAnalizando(true);
     setErrorLocal(null);
     try {
@@ -410,17 +419,26 @@ export function NewMealDrawer({
         base64Data: imagenDatos.base64Data,
         mimeType: imagenDatos.mimeType,
         detallesAdicionales,
-        modelo: modeloUsar
+        modelo: modeloUsar,
+        signal: controller.signal
       });
       setResultadoIa(resultado);
       setPorcionFoto("todo");
       setFactorFoto(1);
       setEditorFotoAbierto(false);
     } catch (err) {
-      setErrorLocal(err.message);
+      if (err.name !== "AbortError") setErrorLocal(err.message);
     } finally {
+      if (analisisFotoControllerRef.current === controller) analisisFotoControllerRef.current = null;
       setAnalizando(false);
     }
+  }
+
+  function cancelarAnalisisFoto() {
+    analisisFotoControllerRef.current?.abort();
+    analisisFotoControllerRef.current = null;
+    setAnalizando(false);
+    setAnalizandoAutomatico(false);
   }
 
   async function ejecutarAnalisisTexto(modeloForzado = null) {
@@ -453,6 +471,7 @@ export function NewMealDrawer({
   }
 
   function reiniciarFoto() {
+    cancelarAnalisisFoto();
     setImagenPreview(null);
     setImagenDatos(null);
     setResultadoIa(null);
@@ -702,6 +721,7 @@ export function NewMealDrawer({
                     <div className="ai-spinner" />
                     <p className="analyzing-title">Analizando tu plato...</p>
                     <small>Integrando ingredientes visibles, supuestos e instrucciones</small>
+                    <button type="button" className="cancel-analysis-button" onClick={cancelarAnalisisFoto}>Cancelar</button>
                   </div>
                 )}
 

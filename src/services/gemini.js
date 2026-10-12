@@ -316,7 +316,8 @@ export async function analizarFotoComida({
   base64Data,
   mimeType = "image/jpeg",
   detallesAdicionales = "",
-  modelo = null
+  modelo = null,
+  signal
 }) {
   if (!isGeminiConfigured) {
     throw new Error("No se ha configurado la API Key de Gemini en el archivo .env (VITE_API_GEMINI).");
@@ -359,6 +360,7 @@ export async function analizarFotoComida({
 
   const response = await fetch(url, {
     method: "POST",
+    signal,
     headers: {
       "Content-Type": "application/json"
     },
