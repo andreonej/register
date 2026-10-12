@@ -58,6 +58,101 @@ function formatoConfianza(nivel) {
   return `Confianza: ${etiquetas[valor] || "media"}`;
 }
 
+export function escalarResultado(resultado, factor) {
+  if (!resultado) return resultado;
+  const escalar = (valor) => Number(valor || 0) * factor;
+  return {
+    ...resultado,
+    totales_plato: Object.fromEntries(Object.entries(resultado.totales_plato || {}).map(([clave, valor]) => [clave, escalar(valor)])),
+    ingredientes: (resultado.ingredientes || []).map((ingrediente) => ({
+      ...ingrediente,
+      peso_estimado_g: escalar(ingrediente.peso_estimado_g),
+      calorias: escalar(ingrediente.calorias),
+      proteinas_g: escalar(ingrediente.proteinas_g),
+      carbohidratos_g: escalar(ingrediente.carbohidratos_g),
+      grasas_g: escalar(ingrediente.grasas_g)
+    }))
+  };
+}
+
+function totalesDeIngredientes(ingredientes) {
+  return ingredientes.reduce((totales, ingrediente) => ({
+    calorias: totales.calorias + Number(ingrediente.calorias || 0),
+    proteinas_g: totales.proteinas_g + Number(ingrediente.proteinas_g || 0),
+    carbohidratos_g: totales.carbohidratos_g + Number(ingrediente.carbohidratos_g || 0),
+    grasas_g: totales.grasas_g + Number(ingrediente.grasas_g || 0)
+  }), { calorias: 0, proteinas_g: 0, carbohidratos_g: 0, grasas_g: 0 });
+}
+
+export function cambiarGramosResultado(resultado, indice, gramos) {
+  if (!resultado) return resultado;
+  const ingredientes = [...(resultado.ingredientes || [])];
+  const anterior = ingredientes[indice];
+  if (!anterior) return resultado;
+  const gramosPrevios = Number(anterior.peso_estimado_g || 0);
+  const escala = gramosPrevios > 0 ? gramos / gramosPrevios : 0;
+  ingredientes[indice] = {
+    ...anterior,
+    peso_estimado_g: gramos,
+    calorias: Number(anterior.calorias || 0) * escala,
+    proteinas_g: Number(anterior.proteinas_g || 0) * escala,
+    carbohidratos_g: Number(anterior.carbohidratos_g || 0) * escala,
+    grasas_g: Number(anterior.grasas_g || 0) * escala
+  };
+  return { ...resultado, ingredientes, totales_plato: totalesDeIngredientes(ingredientes) };
+}
+
+function IngredientsEditor({ ingredientes = [], onNombre, onGramos, onEliminar, onAgregar }) {
+  return (
+    <div className="ingredient-editor">
+      {ingredientes.map((ingrediente, indice) => (
+        <div className="ingredient-editor-row" key={`${indice}-${ingrediente.nombre}`}>
+          <div className="ingredient-editor-fields">
+            <label>
+              <span>Ingrediente</span>
+              <input value={ingrediente.nombre || ""} onChange={(evento) => onNombre(indice, evento.target.value)} />
+            </label>
+            <div className="ingredient-grams-control">
+              <span>Gramos</span>
+              <div>
+                <button type="button" aria-label={`Restar un gramo a ${ingrediente.nombre || "ingrediente"}`} onClick={() => onGramos(indice, Math.max(0, Math.round(Number(ingrediente.peso_estimado_g || 0)) - 1))}>−</button>
+                <input type="number" min="0" step="1" value={Math.round(Number(ingrediente.peso_estimado_g || 0))} onChange={(evento) => onGramos(indice, Math.max(0, Number(evento.target.value) || 0))} />
+                <button type="button" aria-label={`Sumar un gramo a ${ingrediente.nombre || "ingrediente"}`} onClick={() => onGramos(indice, Math.round(Number(ingrediente.peso_estimado_g || 0)) + 1)}>+</button>
+              </div>
+            </div>
+          </div>
+          <div className="ingredient-editor-footer">
+            <span>{Math.round(Number(ingrediente.calorias || 0))} kcal estimadas</span>
+            <button type="button" className="ingredient-remove-button" aria-label={`Quitar ${ingrediente.nombre || "ingrediente"}`} onClick={() => onEliminar(indice)}>Quitar</button>
+          </div>
+        </div>
+      ))}
+      <button type="button" className="ingredient-add-button" onClick={onAgregar}>+ Añadir ingrediente</button>
+    </div>
+  );
+}
+
+function PortionSelector({ seleccion, onSeleccionar, onPersonalizar }) {
+  const opciones = [
+    { id: "todo", texto: "Todo", factor: 1 },
+    { id: "mitad", texto: "Mitad", factor: 0.5 },
+    { id: "tercio", texto: "1/3", factor: 1 / 3 }
+  ];
+  return (
+    <fieldset className="portion-selector">
+      <legend>¿Cuánto comiste?</legend>
+      <div className="portion-options">
+        {opciones.map((opcion) => (
+          <button key={opcion.id} type="button" className={seleccion === opcion.id ? "selected" : ""} aria-pressed={seleccion === opcion.id} onClick={() => onSeleccionar(opcion.id, opcion.factor)}>
+            {opcion.texto}
+          </button>
+        ))}
+        <button type="button" className={seleccion === "personalizado" ? "selected" : ""} aria-pressed={seleccion === "personalizado"} onClick={onPersonalizar}>Personalizado</button>
+      </div>
+    </fieldset>
+  );
+}
+
 export function NewMealDrawer({
   abierto,
   texto,
@@ -77,6 +172,9 @@ export function NewMealDrawer({
   const [detallesAdicionales, setDetallesAdicionales] = useState("");
   const [analizando, setAnalizando] = useState(false);
   const [resultadoIa, setResultadoIa] = useState(null);
+  const [porcionFoto, setPorcionFoto] = useState("todo");
+  const [factorFoto, setFactorFoto] = useState(1);
+  const [editorFotoAbierto, setEditorFotoAbierto] = useState(false);
   const [errorLocal, setErrorLocal] = useState(null);
 
   // Estado para modo Descripción en Texto
@@ -84,6 +182,9 @@ export function NewMealDrawer({
   const [detallesTexto, setDetallesTexto] = useState("");
   const [analizandoTexto, setAnalizandoTexto] = useState(false);
   const [resultadoIaTexto, setResultadoIaTexto] = useState(null);
+  const [porcionTexto, setPorcionTexto] = useState("todo");
+  const [factorTexto, setFactorTexto] = useState(1);
+  const [editorTextoAbierto, setEditorTextoAbierto] = useState(false);
   const [errorTexto, setErrorTexto] = useState(null);
   const [fotoAmpliada, setFotoAmpliada] = useState(false);
 
@@ -181,6 +282,9 @@ export function NewMealDrawer({
         modelo: modeloUsar
       });
       setResultadoIa(resultado);
+      setPorcionFoto("todo");
+      setFactorFoto(1);
+      setEditorFotoAbierto(false);
     } catch (err) {
       setErrorLocal(err.message);
     } finally {
@@ -206,6 +310,9 @@ export function NewMealDrawer({
         modelo: modeloUsar
       });
       setResultadoIaTexto(resultado);
+      setPorcionTexto("todo");
+      setFactorTexto(1);
+      setEditorTextoAbierto(false);
     } catch (err) {
       setErrorTexto(err.message);
     } finally {
@@ -213,35 +320,87 @@ export function NewMealDrawer({
     }
   }
 
-  function editarEnJson(datos) {
-    if (datos) {
-      onTexto(JSON.stringify(datos, null, 2));
-    }
-    setPestana("json");
-  }
-
   function reiniciarFoto() {
     setImagenPreview(null);
     setImagenDatos(null);
     setResultadoIa(null);
+    setPorcionFoto("todo");
+    setFactorFoto(1);
+    setEditorFotoAbierto(false);
     setDetallesAdicionales("");
     setErrorLocal(null);
   }
 
   function reiniciarTexto() {
     setResultadoIaTexto(null);
+    setPorcionTexto("todo");
+    setFactorTexto(1);
+    setEditorTextoAbierto(false);
     setErrorTexto(null);
+  }
+
+  function aplicarPorcionFoto(tipo, factor) {
+    setResultadoIa((actual) => escalarResultado(actual, factor / factorFoto));
+    setFactorFoto(factor);
+    setPorcionFoto(tipo);
+  }
+
+  function aplicarPorcionTexto(tipo, factor) {
+    setResultadoIaTexto((actual) => escalarResultado(actual, factor / factorTexto));
+    setFactorTexto(factor);
+    setPorcionTexto(tipo);
+  }
+
+  function actualizarGramosFoto(indice, gramos) {
+    setResultadoIa((actual) => cambiarGramosResultado(actual, indice, gramos));
+  }
+
+  function actualizarGramosTexto(indice, gramos) {
+    setResultadoIaTexto((actual) => cambiarGramosResultado(actual, indice, gramos));
+  }
+
+  function actualizarNombre(setResultado, indice, nombre) {
+    setResultado((actual) => {
+      if (!actual) return actual;
+      const ingredientes = [...(actual.ingredientes || [])];
+      ingredientes[indice] = { ...ingredientes[indice], nombre };
+      return { ...actual, ingredientes };
+    });
+  }
+
+  function quitarIngrediente(setResultado, indice) {
+    setResultado((actual) => {
+      if (!actual) return actual;
+      const ingredientes = (actual.ingredientes || []).filter((_, posicion) => posicion !== indice);
+      return { ...actual, ingredientes, totales_plato: totalesDeIngredientes(ingredientes) };
+    });
+  }
+
+  function agregarIngrediente(setResultado) {
+    setResultado((actual) => {
+      if (!actual) return actual;
+      const ingredientes = [...(actual.ingredientes || []), {
+        nombre: "Nuevo ingrediente",
+        peso_estimado_g: 100,
+        calorias: 0,
+        proteinas_g: 0,
+        carbohidratos_g: 0,
+        grasas_g: 0,
+        supuesto: false
+      }];
+      return { ...actual, ingredientes, totales_plato: totalesDeIngredientes(ingredientes) };
+    });
   }
 
   function guardarResultadoFoto() {
     if (resultadoIa) {
-      onGuardar({ ...resultadoIa, foto: imagenDatos ? { base64Data: imagenDatos.base64Data, mimeType: imagenDatos.mimeType } : null });
+      onGuardar({ ...resultadoIa, factor_porcion: factorFoto, foto: imagenDatos ? { base64Data: imagenDatos.base64Data, mimeType: imagenDatos.mimeType } : null });
     }
   }
 
   function guardarResultadoTexto() {
     if (resultadoIaTexto) {
-      onGuardar({ ...resultadoIaTexto, foto: null });
+      onGuardar({ ...resultadoIaTexto, factor_porcion: factorTexto, foto: null });
     }
   }
 
@@ -412,6 +571,12 @@ export function NewMealDrawer({
                       </span>
                     </div>
 
+                    <PortionSelector
+                      seleccion={porcionFoto}
+                      onSeleccionar={aplicarPorcionFoto}
+                      onPersonalizar={() => { setPorcionFoto("personalizado"); setEditorFotoAbierto(true); }}
+                    />
+
                     {/* Macros pills */}
                     <div className="ia-macros-pills">
                       <div className="macro-pill pill-cals">
@@ -450,6 +615,16 @@ export function NewMealDrawer({
                       </div>
                     )}
 
+                    {editorFotoAbierto && (
+                      <IngredientsEditor
+                        ingredientes={resultadoIa.ingredientes || []}
+                        onNombre={(indice, nombre) => actualizarNombre(setResultadoIa, indice, nombre)}
+                        onGramos={actualizarGramosFoto}
+                        onEliminar={(indice) => quitarIngrediente(setResultadoIa, indice)}
+                        onAgregar={() => agregarIngrediente(setResultadoIa)}
+                      />
+                    )}
+
                     {/* Botones de acción del resultado */}
                     <div className="ia-actions">
                       <button
@@ -463,9 +638,10 @@ export function NewMealDrawer({
                       <button
                         type="button"
                         className="secondary edit-ingredients-btn"
-                        onClick={() => editarEnJson(resultadoIa)}
+                        onClick={() => setEditorFotoAbierto((abiertoActual) => !abiertoActual)}
+                        aria-expanded={editorFotoAbierto}
                       >
-                        Editar ingredientes
+                        {editorFotoAbierto ? "Listo" : "Editar ingredientes"}
                       </button>
                     </div>
                   </div>
@@ -643,6 +819,12 @@ export function NewMealDrawer({
                       </span>
                     </div>
 
+                    <PortionSelector
+                      seleccion={porcionTexto}
+                      onSeleccionar={aplicarPorcionTexto}
+                      onPersonalizar={() => { setPorcionTexto("personalizado"); setEditorTextoAbierto(true); }}
+                    />
+
                     {/* Macros pills */}
                     <div className="ia-macros-pills">
                       <div className="macro-pill pill-cals">
@@ -681,6 +863,16 @@ export function NewMealDrawer({
                       </div>
                     )}
 
+                    {editorTextoAbierto && (
+                      <IngredientsEditor
+                        ingredientes={resultadoIaTexto.ingredientes || []}
+                        onNombre={(indice, nombre) => actualizarNombre(setResultadoIaTexto, indice, nombre)}
+                        onGramos={actualizarGramosTexto}
+                        onEliminar={(indice) => quitarIngrediente(setResultadoIaTexto, indice)}
+                        onAgregar={() => agregarIngrediente(setResultadoIaTexto)}
+                      />
+                    )}
+
                     {/* Botones de acción del resultado */}
                     <div className="ia-actions">
                       <button
@@ -694,9 +886,10 @@ export function NewMealDrawer({
                       <button
                         type="button"
                         className="secondary edit-ingredients-btn"
-                        onClick={() => editarEnJson(resultadoIaTexto)}
+                        onClick={() => setEditorTextoAbierto((abiertoActual) => !abiertoActual)}
+                        aria-expanded={editorTextoAbierto}
                       >
-                        Editar ingredientes
+                        {editorTextoAbierto ? "Listo" : "Editar ingredientes"}
                       </button>
                     </div>
 
