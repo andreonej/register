@@ -26,13 +26,15 @@ export function analizarProgreso({
   comidas = [],
   objetivos = { calorias: 2000, proteinas: 140, carbohidratos: 200, grasas: 65 },
   perfil = {},
-  historialPesos = []
+  historialPesos = [],
+  fechaReferencia = new Date()
 }) {
   const objetivoTipo = perfil?.objetivo || "mantener"; // "bajar" | "subir" | "mantener"
   const tdeeUsuario = perfil?.tdee || (objetivoTipo === "bajar" ? objetivos.calorias + 400 : objetivoTipo === "subir" ? Math.max(1600, objetivos.calorias - 350) : objetivos.calorias);
 
   // 1. Agrupar por los últimos 7 días
-  const hoy = new Date();
+  const hoy = new Date(fechaReferencia);
+  const hoyIso = fechaLocalDia(hoy);
   const ultimos7Dias = Array.from({ length: 7 }, (_, i) => {
     const fecha = new Date(hoy);
     fecha.setDate(hoy.getDate() - 6 + i);
@@ -43,7 +45,7 @@ export function analizarProgreso({
       fechaObj: fecha,
       esFinDeSemana,
       etiqueta: fecha.toLocaleDateString("es-AR", { weekday: "short" }).replace(".", ""),
-      esHoy: diaIso === fechaLocalDia(hoy),
+      esHoy: diaIso === hoyIso,
       calorias: 0,
       proteinas: 0,
       carbohidratos: 0,
@@ -103,41 +105,26 @@ export function analizarProgreso({
     : objetivos.calorias + 150;
 
   ultimos7Dias.forEach((d) => {
-    if (d.calorias === 0) {
+    d.tieneRegistros = d.comidas.length > 0;
+    if (!d.tieneRegistros) {
       d.estado = "vacio";
       d.colorBarra = "#e5e5e3";
-    } else if (objetivoTipo === "bajar") {
-      if (d.calorias < pisoCalorias) {
-        d.estado = "piso_bajo";
-        d.colorBarra = "#818cf8"; // Violeta: Piso saludable no alcanzado
-      } else if (d.calorias <= techoCalorias) {
-        d.estado = "en_meta";
-        d.colorBarra = "#10b981"; // Verde esmeralda: Déficit perfecto
-      } else {
-        d.estado = "exceso";
-        d.colorBarra = "#f59e0b"; // Ámbar/Naranja: Superó el techo
-      }
-    } else if (objetivoTipo === "subir") {
-      if (d.calorias >= pisoCalorias) {
-        d.estado = "en_meta";
-        d.colorBarra = "#10b981"; // Verde: Logró superávit
-      } else {
-        d.estado = "corto";
-        d.colorBarra = "#f43f5e"; // Rosa/Rojo: Se quedó corto
-      }
     } else {
-      // Mantener
-      if (d.calorias >= pisoCalorias && d.calorias <= techoCalorias) {
+      if (d.calorias < pisoCalorias) {
+        d.estado = "por_debajo";
+        d.colorBarra = "#64748b";
+      } else if (d.calorias > techoCalorias) {
+        d.estado = "por_encima";
+        d.colorBarra = "#f59e0b";
+      } else {
         d.estado = "en_meta";
         d.colorBarra = "#10b981";
-      } else {
-        d.estado = "desviado";
-        d.colorBarra = "#f59e0b";
       }
     }
   });
 
-  const diasRegistrados = ultimos7Dias.filter((d) => d.calorias > 0);
+  const diasCompletos = ultimos7Dias.filter((d) => d.dia < hoyIso);
+  const diasRegistrados = diasCompletos.filter((d) => d.tieneRegistros);
   const diasEnMeta = diasRegistrados.filter((d) => d.estado === "en_meta");
   const totalCalorias = diasRegistrados.reduce((acc, d) => acc + d.calorias, 0);
   const promedioCalorias = diasRegistrados.length ? Math.round(totalCalorias / diasRegistrados.length) : 0;
@@ -190,15 +177,23 @@ export function analizarProgreso({
     const desviacionPromedio = diasRegistrados.length
       ? Math.round(diasRegistrados.reduce((acc, d) => acc + Math.abs(d.calorias - objetivos.calorias), 0) / diasRegistrados.length)
       : 0;
+    const proporcionEnMeta = diasRegistrados.length ? diasEnMeta.length / diasRegistrados.length : null;
+    const etiquetaEstabilidad = proporcionEnMeta === null
+      ? "Aún sin datos suficientes"
+      : proporcionEnMeta >= 0.7
+      ? "Estable"
+      : proporcionEnMeta >= 0.4
+      ? "Variable"
+      : "Irregular";
 
     heroInfo = {
       tipo: "mantener",
       tituloHéroe: "Estabilidad Energética",
-      valorPrincipal: `${diasEnMeta.length} / ${diasRegistrados.length || 7}`,
+      valorPrincipal: `${diasEnMeta.length} / ${diasRegistrados.length}`,
       unidadPrincipal: "días en rango",
       subtitulo: `Desviación promedio de ±${desviacionPromedio} kcal frente a tu meta de ${objetivos.calorias} kcal`,
-      badgeTexto: diasEnMeta.length >= 5 ? "Alta Estabilidad" : "Variación Moderada",
-      badgeTipo: diasEnMeta.length >= 5 ? "exito" : "neutro",
+      badgeTexto: etiquetaEstabilidad,
+      badgeTipo: etiquetaEstabilidad === "Estable" ? "exito" : etiquetaEstabilidad === "Irregular" ? "alerta" : "neutro",
       detalleRitmo: `Promedio diario: ${promedioCalorias} kcal (Meta: ${objetivos.calorias} kcal).`,
       avisoPiso: null
     };
@@ -304,11 +299,12 @@ export function analizarProgreso({
   // 7. Comparativa Fin de semana vs Días de semana
   const diasSemanaLaboral = diasRegistrados.filter((d) => !d.esFinDeSemana);
   const diasFinSemana = diasRegistrados.filter((d) => d.esFinDeSemana);
+  const comparativaFindeDisponible = diasFinSemana.length >= 2 && diasSemanaLaboral.length > 0;
 
-  const promSemana = diasSemanaLaboral.length
+  const promSemana = comparativaFindeDisponible
     ? Math.round(diasSemanaLaboral.reduce((acc, d) => acc + d.calorias, 0) / diasSemanaLaboral.length)
     : 0;
-  const promFinSemana = diasFinSemana.length
+  const promFinSemana = comparativaFindeDisponible
     ? Math.round(diasFinSemana.reduce((acc, d) => acc + d.calorias, 0) / diasFinSemana.length)
     : 0;
 
@@ -334,6 +330,7 @@ export function analizarProgreso({
     dias: ultimos7Dias,
     diasRegistrados,
     totalDiasRegistrados: diasRegistrados.length,
+    totalDiasCompletos: diasCompletos.length,
     pisoCalorias,
     techoCalorias,
     promedioCalorias,
@@ -349,6 +346,7 @@ export function analizarProgreso({
     diagnosticoAtribucion,
     mensajeProyeccion,
     contextoFinde: {
+      datosSuficientes: comparativaFindeDisponible,
       promSemana,
       promFinSemana,
       diferencia: diferenciaFinde
