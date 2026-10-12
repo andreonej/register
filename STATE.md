@@ -2,7 +2,7 @@
 
 ## Etapa actual
 
-Etapa 8 — Progreso y cierre de brecha; implementación en curso, validación manual pendiente.
+Etapa 9 — Criterios de aceptación globales; revisión en curso.
 
 ## Hecho
 
@@ -87,8 +87,10 @@ Etapa 8 — Progreso y cierre de brecha; implementación en curso, validación m
 - Etapa 8: las sugerencias de cierre de brecha usan densidades nutricionales de ingredientes habituales y se limitan por kcal, grasas y carbohidratos restantes; muestran cantidades concretas y macros. Hay opción combinada si dos alimentos caben dentro de los límites. En Hoy se reutilizan las sugerencias y se oculta el bloque si no faltan más de 15 g de proteína.
 - Cierre de brecha muestra como máximo cinco sugerencias, priorizadas por frecuencia de uso y manteniendo la combinación dentro del límite.
 - Etapa 8: para el objetivo Mantener, Progreso muestra un registro manual de peso y tendencia de los últimos 30 días con los servicios existentes.
-- Verificación técnica etapa 8: `npm run build` correcto y `git diff --check` limpio. Falta la validación manual.
-- Siguiente paso exacto: probar Semana/Mes, tocar una barra, filtrar cada categoría del ADN, revisar sugerencias con límites de kcal/macros y registrar un peso con objetivo Mantener.
+- Etapa 8 validada manualmente por el usuario; confirmó que funciona. También validó el límite de cinco sugerencias y la posición del bloque debajo de las comidas.
+- Etapa 9: revisión final de los cinco criterios globales de la especificación.
+- Verificación técnica etapa 8: `npm run build` correcto, `git diff --check` limpio y pruebas manuales confirmadas por el usuario.
+- Siguiente paso exacto: auditar textos visibles, entrada por cámara, promedios sin el día en curso, restricciones del cierre de brecha y coherencia entre mensajes de estado.
 - Pendiente de aclarar en otra sesión: obtener o agregar el SQL de creación inicial de `comidas` y `comida_ingredientes` para documentar su esquema desplegado completo.
 
 ## Cómo probar la etapa anterior
