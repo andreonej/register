@@ -800,8 +800,8 @@
   background: #f59e0b;
 }
 
-.legend-dot.purple::before {
-  background: #818cf8;
+.legend-dot.blue::before {
+  background: #64748b;
 }
 
 .weekly-chart-box {
@@ -881,19 +881,14 @@
   color: #15803d;
 }
 
-.status-exceso {
+.status-por_encima {
   background: #fef3c7;
   color: #b45309;
 }
 
-.status-piso_bajo {
-  background: #ede9fe;
-  color: #6d28d9;
-}
-
-.status-corto {
-  background: #ffe4e6;
-  color: #be123c;
+.status-por_debajo {
+  background: #e2e8f0;
+  color: #475569;
 }
 
 .tooltip-macros {

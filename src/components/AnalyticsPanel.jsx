@@ -11,6 +11,7 @@ import {
   ReferenceArea
 } from "recharts";
 import { analizarProgreso } from "../lib/progresoIntelligence";
+import { COLORES_MACROS } from "./MacroBar";
 
 export function AnalyticsPanel({
   comidas = [],
@@ -28,6 +29,7 @@ export function AnalyticsPanel({
   const {
     dias = [],
     totalDiasRegistrados = 0,
+    totalDiasCompletos = 0,
     pisoCalorias = 1500,
     techoCalorias = 2200,
     promedioCalorias = 0,
@@ -55,16 +57,13 @@ export function AnalyticsPanel({
             <strong>{data.calorias} kcal</strong>
             <span className={`tooltip-tag status-${data.estado}`}>
               {data.estado === "en_meta"
-                ? "En rango"
-                : data.estado === "piso_bajo"
-                ? "Bajo el piso"
-                : data.estado === "exceso"
-                ? "Sobre el techo"
-                : data.estado === "corto"
+                ? "En banda"
+                : data.estado === "por_debajo"
                 ? "Por debajo"
-                : data.calorias === 0
-                ? "Sin datos"
-                : "Fuera de rango"}
+                : data.estado === "por_encima"
+                ? "Por encima"
+                : "Sin datos"}
+              {data.esHoy ? " · En curso" : ""}
             </span>
           </div>
           {data.calorias > 0 && (
@@ -133,9 +132,9 @@ export function AnalyticsPanel({
             </span>
           </div>
           <div className="chart-legend-mini">
-            <span className="legend-dot green">En meta</span>
-            <span className="legend-dot orange">Exceso/Desvío</span>
-            {heroInfo.tipo === "bajar" && <span className="legend-dot purple">Piso no alcanzado</span>}
+            <span className="legend-dot green">En banda</span>
+            <span className="legend-dot blue">Por debajo</span>
+            <span className="legend-dot orange">Por encima</span>
           </div>
         </div>
 
@@ -161,7 +160,14 @@ export function AnalyticsPanel({
               />
               <Bar dataKey="calorias" radius={[6, 6, 2, 2]}>
                 {dias.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.colorBarra} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.colorBarra}
+                    fillOpacity={entry.esHoy ? 0.72 : 1}
+                    stroke={entry.esHoy ? entry.colorBarra : "none"}
+                    strokeWidth={entry.esHoy ? 2 : 0}
+                    strokeDasharray={entry.esHoy ? "4 3" : undefined}
+                  />
                 ))}
               </Bar>
             </BarChart>
@@ -175,7 +181,7 @@ export function AnalyticsPanel({
           </div>
           <div className="meta-stat">
             <small>Días registrados</small>
-            <b>{totalDiasRegistrados} <small>/ 7</small></b>
+            <b>{totalDiasRegistrados} <small>/ {totalDiasCompletos}</small></b>
           </div>
           <div className="meta-stat">
             <small>Meta diaria</small>
@@ -227,7 +233,7 @@ export function AnalyticsPanel({
             emoji="🥩"
             valor={promedioProteinas}
             objetivo={objetivos.proteinas}
-            color="#2563eb"
+            color={COLORES_MACROS.proteinas}
             destacado={heroInfo.tipo === "subir"}
           />
           <MacroBarDetail
@@ -235,14 +241,14 @@ export function AnalyticsPanel({
             emoji="🍞"
             valor={promedioCarbos}
             objetivo={objetivos.carbohidratos}
-            color="#16a34a"
+            color={COLORES_MACROS.carbohidratos}
           />
           <MacroBarDetail
             etiqueta="Grasas"
             emoji="🥑"
             valor={promedioGrasas}
             objetivo={objetivos.grasas}
-            color="#d97706"
+            color={COLORES_MACROS.grasas}
           />
         </div>
       </div>
@@ -286,8 +292,11 @@ export function AnalyticsPanel({
       </div>
 
       {/* 7. Patrones de Contexto: Semana vs. Fin de semana */}
-      {contextoFinde.promFinSemana > 0 && contextoFinde.promSemana > 0 && (
-        <div className="insight-card weekend-pattern-card">
+      <div className="insight-card weekend-pattern-card">
+        {!contextoFinde.datosSuficientes ? (
+          <p className="empty-state-mini">Aún sin datos suficientes</p>
+        ) : (
+          <>
           <div className="card-heading">
             <div>
               <h3>Patrón Semana vs. Fin de Semana</h3>
@@ -306,15 +315,16 @@ export function AnalyticsPanel({
             </div>
           </div>
 
-          {Math.abs(contextoFinde.diferencia) > 120 && (
-            <p className="pattern-insight">
-              {contextoFinde.diferencia > 0
-                ? `Tus fines de semana promedian +${contextoFinde.diferencia} kcal más que los días de semana. Considera compensar con mayor actividad o elegir porciones similares.`
-                : `Tus fines de semana son más ligeros (-${Math.abs(contextoFinde.diferencia)} kcal). Excelente consistencia general.`}
-            </p>
-          )}
-        </div>
-      )}
+          <p className="pattern-insight">
+            {contextoFinde.diferencia > 120
+              ? `Los fines de semana promedian ${contextoFinde.diferencia} kcal más que los días de semana.`
+              : contextoFinde.diferencia < -120
+              ? `Los fines de semana promedian ${Math.abs(contextoFinde.diferencia)} kcal menos que los días de semana.`
+              : "Los promedios de ambos períodos son similares."}
+          </p>
+          </>
+        )}
+      </div>
 
       {/* 8. Proyección mensual estimada */}
       {mensajeProyeccion && (

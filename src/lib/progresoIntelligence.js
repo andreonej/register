@@ -151,7 +151,7 @@ export function analizarProgreso({
       detalleRitmo: deficitSemanalTotal > 0
         ? `Equivale a aprox. ${gramosGrasaEstimados}g de grasa corporal movilizada esta semana.`
         : "Esta semana el balance neto fue en equilibrio o superávit.",
-      avisoPiso: diasRegistrados.some((d) => d.estado === "piso_bajo")
+      avisoPiso: diasRegistrados.some((d) => d.estado === "por_debajo")
         ? "Hay días con ingesta por debajo del piso saludable (1200 kcal). Cuidá no restringir de más para preservar tu masa muscular."
         : null
     };
@@ -168,7 +168,7 @@ export function analizarProgreso({
       badgeTexto: cumplimientoProt >= 95 ? "Superávit Proteico" : "Requiere más proteína",
       badgeTipo: cumplimientoProt >= 95 ? "exito" : "alerta",
       detalleRitmo: `Superávit neto acumulado: ${superavitSemanal > 0 ? "+" : ""}${superavitSemanal} kcal esta semana.`,
-      avisoPiso: diasRegistrados.some((d) => d.estado === "corto")
+      avisoPiso: diasRegistrados.some((d) => d.estado === "por_debajo")
         ? "En algunos días te quedaste corto del superávit calórico necesario para construcción muscular."
         : null
     };

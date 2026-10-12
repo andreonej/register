@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnalyticsPanel } from "./components/AnalyticsPanel";
-import { MacroRing } from "./components/MacroBar";
+import { COLORES_MACROS, MacroRing } from "./components/MacroBar";
 import { MealRow } from "./components/MealRow";
 import { NewMealDrawer } from "./components/NewMealDrawer";
 import { ProfileView } from "./components/ProfileView";
@@ -247,9 +247,9 @@ export default function DiarioComidas() {
               </div>
               <div className="rings">
                 <MacroRing etiqueta="Calorías" valor={totales.calorias} maximo={objetivos.calorias} unidad="" />
-                <MacroRing etiqueta="Proteína" valor={totales.proteinas} maximo={objetivos.proteinas} />
-                <MacroRing etiqueta="Carbos" valor={totales.carbohidratos} maximo={objetivos.carbohidratos} />
-                <MacroRing etiqueta="Grasas" valor={totales.grasas} maximo={objetivos.grasas} />
+                <MacroRing etiqueta="Proteína" valor={totales.proteinas} maximo={objetivos.proteinas} color={COLORES_MACROS.proteinas} />
+                <MacroRing etiqueta="Carbos" valor={totales.carbohidratos} maximo={objetivos.carbohidratos} color={COLORES_MACROS.carbohidratos} />
+                <MacroRing etiqueta="Grasas" valor={totales.grasas} maximo={objetivos.grasas} color={COLORES_MACROS.grasas} />
               </div>
             </section>
 
