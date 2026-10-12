@@ -2,7 +2,7 @@
 
 ## Etapa actual
 
-Etapa 3 — Porción e ingredientes editables; implementación lista, migración de Supabase y validación manual pendientes.
+Etapa 4 — Esquema del análisis; en curso (confianza, agrupación y sugerencias contextuales).
 
 ## Hecho
 
@@ -20,12 +20,14 @@ Etapa 3 — Porción e ingredientes editables; implementación lista, migración
 - Etapa 3: los ingredientes se pueden editar, agregar o quitar; los gramos recalculan proporcionalmente kcal/macros y los totales.
 - El editor JSON estructurado queda dentro de Perfil → Ajustes avanzados → Modo de depuración.
 - El guardado incluye `factor_porcion`; `supabase_porcion_setup.sql` agrega la columna con valor predeterminado 1 para comidas existentes.
+- Etapa 3 validada manualmente por el usuario; confirmó que los cambios y correcciones funcionaron.
+- Se redondean valores de porción a dos decimales y las claves estables del editor conservan el foco al escribir (commit `441bf71`).
 
 ## Decisiones
 
-- Se consultó Supabase solo mediante REST de lectura para verificar `factor_porcion`; la columna no existe todavía. No se insertaron ni modificaron registros.
+- Se consultó Supabase solo mediante REST de lectura para verificar `factor_porcion`; en ese momento la columna no existía. El usuario confirmó después que la etapa 3 funcionó, por lo que la migración necesaria quedó aplicada.
 - Se agregó `fechaReferencia` opcional a `analizarProgreso` para poder verificar ventanas históricas de forma reproducible; en la app se usa la fecha actual.
-- La migración SQL está preparada, pero debe ejecutarse en el SQL Editor de Supabase antes de guardar comidas desde esta versión.
+- La fase 4 agrega cantidad y confianza por ingrediente con migración aditiva y valores compatibles para comidas existentes.
 
 ## Archivos tocados
 
@@ -47,13 +49,11 @@ Etapa 3 — Porción e ingredientes editables; implementación lista, migración
 - Verificación etapa 1: `npm run build` correcto y servidor Vite responde HTTP 200. Caso controlado con domingo 11 en curso (355 kcal), seis días anteriores registrados y solo sábado como día de fin de semana completo: promedio 1167 kcal sin incluir las 355 kcal de hoy, estabilidad `1 / 6 · Irregular` y comparativa marcada insuficiente.
 - Verificación técnica etapa 2: `npm run build` correcto; servidor Vite responde HTTP 200. El usuario confirmó que funcionó perfectamente.
 - Verificación técnica etapa 3: `npm run build` correcto; caso determinista confirmó que Mitad escala ingredientes/macros y editar gramos recalcula kcal y totales. La consulta REST de solo lectura falló al solicitar `factor_porcion`, señal de que falta aplicar la migración.
-- Siguiente paso exacto: ejecutar `supabase_porcion_setup.sql` en Supabase y probar manualmente la etapa 3: escalar porción, cambiar gramos, agregar/quitar ingredientes, guardar y abrir una comida previa.
+- Siguiente paso exacto: ampliar los prompts y la normalización de respuesta, mostrar confianza/cantidad/sugerencias contextuales y persistir los nuevos campos sin afectar registros antiguos.
 - Pendiente de aclarar en otra sesión: obtener o agregar el SQL de creación inicial de `comidas` y `comida_ingredientes` para documentar su esquema desplegado completo.
 
-## Cómo probar la etapa actual (tras aplicar la migración)
+## Cómo probar la etapa actual
 
-1. Ejecutar `supabase_porcion_setup.sql` en el SQL Editor del proyecto Supabase.
-2. Analizar una foto y probar Todo, Mitad y 1/3; comprobar que los valores cambian sin volver a analizar.
-3. Elegir Personalizado, modificar gramos, agregar un ingrediente y quitar uno; confirmar que los totales se actualizan.
-4. Guardar y comprobar en el registro que se conserva la comida; abrir una comida previa y confirmar que sigue mostrando porción completa.
-5. Abrir Perfil → Ajustes avanzados → Modo de depuración para confirmar que el editor estructurado ya no aparece en el flujo normal.
+1. Analizar tres platos distintos; verificar confianza general y por ingrediente, y que nombres repetidos se agrupen con cantidad.
+2. Confirmar que los chips sugeridos corresponden al plato; usar uno y volver a analizar.
+3. Guardar y volver a abrir registros nuevos y antiguos para confirmar compatibilidad.
