@@ -420,10 +420,6 @@ export default function DiarioComidas() {
               </div>
             </section>
 
-            {diaSeleccionado === hoy && objetivos.proteinas - totales.proteinas > 15 && (
-              <section className="gap-today-card"><strong>Cierre de brecha</strong>{cierreBrechaHoy.length ? <div className="gap-today-options">{cierreBrechaHoy.map((sugerencia, index) => <p key={index}><b>{sugerencia.titulo}</b><span>+{sugerencia.proteinas} g proteína · {sugerencia.calorias} kcal · {sugerencia.grasas} g grasa · {sugerencia.carbohidratos} g carbos</span></p>)}</div> : <p>Ya estás cerca de tu meta. No hay una opción habitual que quepa dentro de las kcal, grasas y macros que te quedan.</p>}</section>
-            )}
-
             <section className="meal-section">
               <div className="list-title">
                 <h2>Comidas</h2>
@@ -431,6 +427,10 @@ export default function DiarioComidas() {
               </div>
               {comidasDelDia.length ? gruposFranja.map(([franja, items]) => <section className="meal-time-group" key={franja}><div className="meal-time-heading"><h3>{franja}</h3><span>Subtotal · {Math.round(items.reduce((suma, item) => suma + Number(item.calorias_totales || 0), 0))} kcal</span></div>{items.map(renderComida)}</section>) : <p className="empty-state">No hay comidas registradas este día.</p>}
             </section>
+
+            {diaSeleccionado === hoy && objetivos.proteinas - totales.proteinas > 15 && (
+              <section className="gap-today-card"><strong>Cierre de brecha</strong>{cierreBrechaHoy.length ? <div className="gap-today-options">{cierreBrechaHoy.map((sugerencia, index) => <p key={index}><b>{sugerencia.titulo}</b><span>+{sugerencia.proteinas} g proteína · {sugerencia.calorias} kcal · {sugerencia.grasas} g grasa · {sugerencia.carbohidratos} g carbos</span></p>)}</div> : <p>Ya estás cerca de tu meta. No hay una opción habitual que quepa dentro de las kcal, grasas y macros que te quedan.</p>}</section>
+            )}
           </>
         )}
       </div>
