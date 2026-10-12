@@ -24,7 +24,10 @@ export async function crearComida(registro, perfilId = null) {
     proteinas_totales_g: totales.proteinas_g ?? null,
     carbohidratos_totales_g: totales.carbohidratos_g ?? null,
     grasas_totales_g: totales.grasas_g ?? null,
-    nivel_confianza: registro.nivel_confianza ?? null
+    nivel_confianza: registro.nivel_confianza ?? null,
+    factor_porcion: Number.isFinite(Number(registro.factor_porcion)) && Number(registro.factor_porcion) > 0 && Number(registro.factor_porcion) <= 1
+      ? Number(registro.factor_porcion)
+      : 1
   };
   if (perfilId || registro.perfil_id) {
     bodyPayload.perfil_id = perfilId || registro.perfil_id;
