@@ -6,6 +6,9 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Line,
+  LineChart,
+  CartesianGrid,
   Cell,
   ReferenceLine,
   ReferenceArea
@@ -18,13 +21,19 @@ export function AnalyticsPanel({
   objetivos = { calorias: 2000, proteinas: 140, carbohidratos: 200, grasas: 65 },
   perfil = {},
   historialPesos = [],
-  onVerHistorial
+  onVerHistorial,
+  onRegistrarPeso
 }) {
   const [diaSeleccionadoGrafico, setDiaSeleccionadoGrafico] = useState(null);
+  const [periodo, setPeriodo] = useState("semana");
+  const [filtroCategoria, setFiltroCategoria] = useState("todos");
+  const [nuevoPeso, setNuevoPeso] = useState("");
+  const [fechaPeso, setFechaPeso] = useState(() => { const hoy = new Date(); return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`; });
+  const [guardandoPeso, setGuardandoPeso] = useState(false);
 
   const analisis = useMemo(() => {
-    return analizarProgreso({ comidas, objetivos, perfil, historialPesos });
-  }, [comidas, objetivos, perfil, historialPesos]);
+    return analizarProgreso({ comidas, objetivos, perfil, historialPesos, ventanaDias: periodo === "semana" ? 7 : 30 });
+  }, [comidas, objetivos, perfil, historialPesos, periodo]);
 
   const {
     dias = [],
@@ -42,6 +51,8 @@ export function AnalyticsPanel({
     sugerenciasBrecha = [],
     proteinasFaltantesHoy = 0,
     caloriasRestantesHoy = 0,
+    grasasRestantesHoy = 0,
+    carbohidratosRestantesHoy = 0,
     diagnosticoAtribucion = null,
     mensajeProyeccion = null,
     contextoFinde = { promSemana: 0, promFinSemana: 0, diferencia: 0 }
@@ -52,9 +63,10 @@ export function AnalyticsPanel({
       const data = payload[0].payload;
       return (
         <div className="custom-chart-tooltip">
-          <b>{data.etiqueta.toUpperCase()} · {data.dia}</b>
+          <b>{new Date(`${data.dia}T12:00:00`).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}</b>
           <div className="tooltip-cal">
             <strong>{data.calorias} kcal</strong>
+            <span>Diferencia vs. meta: {data.calorias - objetivos.calorias > 0 ? "+" : ""}{data.calorias - objetivos.calorias} kcal</span>
             <span className={`tooltip-tag status-${data.estado}`}>
               {data.estado === "en_meta"
                 ? "En banda"
@@ -79,13 +91,33 @@ export function AnalyticsPanel({
     return null;
   };
 
+  const pesosUltimos30Dias = useMemo(() => {
+    const limite = new Date();
+    limite.setDate(limite.getDate() - 29);
+    return historialPesos
+      .filter((item) => new Date(`${item.fecha}T12:00:00`) >= limite)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))
+      .map((item) => ({ ...item, etiqueta: new Date(`${item.fecha}T12:00:00`).toLocaleDateString("es-AR", { day: "numeric", month: "short" }) }));
+  }, [historialPesos]);
+
+  async function guardarPeso(evento) {
+    evento.preventDefault();
+    if (!nuevoPeso || Number(nuevoPeso) <= 0 || !onRegistrarPeso) return;
+    setGuardandoPeso(true);
+    try {
+      await onRegistrarPeso({ pesoKg: nuevoPeso, fecha: fechaPeso });
+      setNuevoPeso("");
+    } finally {
+      setGuardandoPeso(false);
+    }
+  }
+
   return (
     <section className="insights-redesign">
       {/* 1. Encabezado */}
       <div className="insights-header">
         <div>
-          <span className="eyebrow">Análisis & Métricas</span>
-          <h2>Evolución y Hábitos</h2>
+          <span className="eyebrow">Seguimiento personal</span>
         </div>
         <span className="goal-pill-tag">
           Objetivo: {perfil?.objetivo === "bajar" ? "📉 Déficit" : perfil?.objetivo === "subir" ? "📈 Superávit" : "⚖️ Mantener"}
@@ -131,6 +163,10 @@ export function AnalyticsPanel({
               Banda recomendada: <b>{pisoCalorias}–{techoCalorias} kcal</b>
             </span>
           </div>
+          <div className="chart-period-selector" role="group" aria-label="Período del gráfico">
+            <button className={periodo === "semana" ? "active" : ""} onClick={() => { setPeriodo("semana"); setDiaSeleccionadoGrafico(null); }}>Semana</button>
+            <button className={periodo === "mes" ? "active" : ""} onClick={() => { setPeriodo("mes"); setDiaSeleccionadoGrafico(null); }}>Mes</button>
+          </div>
           <div className="chart-legend-mini">
             <span className="legend-dot green">En banda</span>
             <span className="legend-dot blue">Por debajo</span>
@@ -158,7 +194,7 @@ export function AnalyticsPanel({
                 strokeOpacity={0.25}
                 strokeDasharray="3 3"
               />
-              <Bar dataKey="calorias" radius={[6, 6, 2, 2]}>
+              <Bar dataKey="calorias" radius={[6, 6, 2, 2]} onClick={(item) => setDiaSeleccionadoGrafico(item?.dia || item?.payload?.dia || null)}>
                 {dias.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
@@ -173,6 +209,7 @@ export function AnalyticsPanel({
             </BarChart>
           </ResponsiveContainer>
         </div>
+        {diaSeleccionadoGrafico && (() => { const dia = dias.find((item) => item.dia === diaSeleccionadoGrafico); return dia ? <div className="selected-chart-day"><b>{new Date(`${dia.dia}T12:00:00`).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}</b><span>{dia.calorias} kcal</span><span>Diferencia vs. meta: {dia.calorias - objetivos.calorias > 0 ? "+" : ""}{dia.calorias - objetivos.calorias} kcal</span></div> : null; })()}
 
         <div className="chart-footer-meta">
           <div className="meta-stat">
@@ -191,7 +228,7 @@ export function AnalyticsPanel({
       </div>
 
       {/* 4. Cerrar la brecha ("Comé esto con tus alimentos habituales") */}
-      {sugerenciasBrecha.length > 0 && (
+      {proteinasFaltantesHoy > 15 && (
         <div className="insight-card gap-closer-card">
           <div className="card-heading">
             <div>
@@ -200,21 +237,20 @@ export function AnalyticsPanel({
             </div>
             <span className="gap-missing">Faltan {proteinasFaltantesHoy}g</span>
           </div>
-          <p className="gap-desc">
-            Alimentos habituales en tus registros para alcanzar tus {objetivos.proteinas}g de proteína:
-          </p>
+          <p className="gap-desc">Te quedan {caloriasRestantesHoy} kcal, {grasasRestantesHoy} g de grasa y {carbohidratosRestantesHoy} g de carbohidratos para hoy. Las opciones se limitan a esos valores.</p>
 
-          <div className="suggestions-grid">
+          {sugerenciasBrecha.length ? <div className="suggestions-grid">
             {sugerenciasBrecha.map((sug, idx) => (
               <div key={idx} className="suggestion-pill-card">
                 <div className="sug-icon">🍽️</div>
                 <div className="sug-text">
                   <strong>{sug.titulo}</strong>
-                  <span>{sug.aporte} · <small>{sug.motivo}</small></span>
+                  <span>+{sug.proteinas} g proteína · {sug.calorias} kcal · {sug.grasas} g grasa · {sug.carbohidratos} g carbos</span>
+                  <small>{sug.motivo}</small>
                 </div>
               </div>
             ))}
-          </div>
+          </div> : <p className="empty-state-mini">Ya estás cerca de tu meta. No hay una opción habitual que respete los nutrientes que te quedan hoy.</p>}
         </div>
       )}
 
@@ -253,45 +289,7 @@ export function AnalyticsPanel({
         </div>
       </div>
 
-      {/* 6. ADN Alimentario & Diversidad de la Dieta */}
-      <div className="insight-card dna-ingredients-card">
-        <div className="card-heading">
-          <div>
-            <span className="eyebrow">Identidad Nutricional</span>
-            <h3>Tu ADN Alimentario</h3>
-          </div>
-          <span className="diversity-badge">
-            🌱 {scoreDiversidad} ingredientes únicos
-          </span>
-        </div>
-        <p className="dna-desc">
-          Los alimentos más frecuentes en tus registros y base de tu dieta:
-        </p>
-
-        <div className="ingredients-cloud">
-          {topIngredientes.length > 0 ? (
-            topIngredientes.map((item) => (
-              <div key={item.nombreNorm} className="ingredient-tag-pill">
-                <b>{item.nombreOriginal}</b>
-                <span>{item.veces}×</span>
-              </div>
-            ))
-          ) : (
-            <p className="empty-state-mini">Registra más comidas para descubrir tu repertorio.</p>
-          )}
-        </div>
-
-        {diagnosticoAtribucion && (
-          <div className="attribution-box">
-            <span className="attr-icon">🔍</span>
-            <p>
-              <strong>Atribución calórica:</strong> {diagnosticoAtribucion.mensaje}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* 7. Patrones de Contexto: Semana vs. Fin de semana */}
+      {/* 5. Patrones de Contexto: Semana vs. Fin de semana */}
       <div className="insight-card weekend-pattern-card">
         {!contextoFinde.datosSuficientes ? (
           <p className="empty-state-mini">Aún sin datos suficientes</p>
@@ -325,6 +323,55 @@ export function AnalyticsPanel({
           </>
         )}
       </div>
+
+      {/* 6. ADN Alimentario & Diversidad de la Dieta */}
+      <div className="insight-card dna-ingredients-card">
+        <div className="card-heading">
+          <div>
+            <span className="eyebrow">Identidad Nutricional</span>
+            <h3>Tu ADN Alimentario</h3>
+          </div>
+          <span className="diversity-badge">
+            🌱 {scoreDiversidad} ingredientes únicos
+          </span>
+        </div>
+        <p className="dna-desc">
+          Los alimentos más frecuentes en tus registros y base de tu dieta:
+        </p>
+
+        <div className="ingredient-category-filters" role="group" aria-label="Filtrar alimentos frecuentes">
+          {[['todos', 'Todos'], ['proteinas', 'Proteínas'], ['verduras', 'Verduras'], ['alcohol', 'Alcohol'], ['ultraprocesados', 'Ultraprocesados'], ['otros', 'Otros']].map(([key, label]) => <button key={key} className={filtroCategoria === key ? "active" : ""} onClick={() => setFiltroCategoria(key)}>{label}</button>)}
+        </div>
+        <div className="ingredients-cloud">
+          {topIngredientes.filter((item) => filtroCategoria === "todos" || item.categoria === filtroCategoria).slice(0, 10).length > 0 ? (
+            topIngredientes.filter((item) => filtroCategoria === "todos" || item.categoria === filtroCategoria).slice(0, 10).map((item) => (
+              <div key={item.nombreNorm} className="ingredient-tag-pill">
+                <b>{item.nombreOriginal}</b>
+                <span>{item.veces}×</span>
+              </div>
+            ))
+          ) : (
+            <p className="empty-state-mini">Registra más comidas para descubrir tu repertorio.</p>
+          )}
+        </div>
+
+        {diagnosticoAtribucion && (
+          <div className="attribution-box">
+            <span className="attr-icon">🔍</span>
+            <p>
+              <strong>Atribución calórica:</strong> {diagnosticoAtribucion.mensaje}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {perfil?.objetivo === "mantener" && (
+        <section className="insight-card weight-trend-card">
+          <div className="card-heading"><div><h3>Tendencia de peso</h3><span>Últimos 30 días</span></div>{pesosUltimos30Dias.length > 0 && <strong>{pesosUltimos30Dias[pesosUltimos30Dias.length - 1].peso_kg} kg</strong>}</div>
+          {pesosUltimos30Dias.length > 1 ? <div className="weight-trend-chart"><ResponsiveContainer width="100%" height={160}><LineChart data={pesosUltimos30Dias}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ececea"/><XAxis dataKey="etiqueta" tick={{ fontSize: 10 }} axisLine={false} tickLine={false}/><YAxis domain={["dataMin - 1", "dataMax + 1"]} width={38} tick={{ fontSize: 10 }} axisLine={false} tickLine={false}/><Tooltip formatter={(valor) => [`${valor} kg`, "Peso"]}/><Line type="monotone" dataKey="peso_kg" stroke="#557b69" strokeWidth={2} dot={{ r: 3 }}/></LineChart></ResponsiveContainer></div> : <p className="empty-state-mini">Registra al menos dos pesos para ver la tendencia.</p>}
+          <form className="progress-weight-form" onSubmit={guardarPeso}><label>Peso (kg)<input required type="number" min="20" max="400" step="0.1" value={nuevoPeso} onChange={(event) => setNuevoPeso(event.target.value)} placeholder="Ej. 72.5"/></label><label>Fecha<input required type="date" value={fechaPeso} onChange={(event) => setFechaPeso(event.target.value)}/></label><button type="submit" disabled={guardandoPeso}>{guardandoPeso ? "Guardando…" : "Registrar peso"}</button></form>
+        </section>
+      )}
 
       {/* 8. Proyección mensual estimada */}
       {mensajeProyeccion && (

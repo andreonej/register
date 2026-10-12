@@ -83,8 +83,11 @@ Etapa 8 — Progreso y cierre de brecha; implementación en curso, validación m
 - Verificación técnica etapa 5: `npm run build` y `git diff --check` correctos; el usuario confirmó validación manual exitosa.
 - Verificación técnica etapa 6: `npm run build` correcto; validación manual confirmada por el usuario.
 - Verificación técnica etapa 7: `npm run build` y `git diff --check` correctos; HTTP 200. Validación manual confirmada por el usuario.
-- Etapa 8 en curso: reorganizar Progreso, agregar selector Semana/Mes con tooltip completo, filtros del ADN alimentario y sugerencias de cierre de brecha limitadas por kcal y macros restantes.
-- Siguiente paso exacto: validar ambas ventanas del gráfico, tooltip al tocar barras, filtro de categorías y sugerencias compatibles con los límites nutricionales.
+- Etapa 8: Progreso tiene un único título, mantiene el insight/estabilidad al inicio y ordena gráfico, balance, patrón semanal, ADN e historial; selector Semana/Mes, detalle táctil de barras con fecha/kcal/diferencia, y filtros de ADN (proteínas, verduras, alcohol, ultraprocesados y otros). Condimentos y aceites se excluyen del ranking.
+- Etapa 8: las sugerencias de cierre de brecha usan densidades nutricionales de ingredientes habituales y se limitan por kcal, grasas y carbohidratos restantes; muestran cantidades concretas y macros. Hay opción combinada si dos alimentos caben dentro de los límites. En Hoy se reutilizan las sugerencias y se oculta el bloque si no faltan más de 15 g de proteína.
+- Etapa 8: para el objetivo Mantener, Progreso muestra un registro manual de peso y tendencia de los últimos 30 días con los servicios existentes.
+- Verificación técnica etapa 8: `npm run build` correcto y `git diff --check` limpio. Falta la validación manual.
+- Siguiente paso exacto: probar Semana/Mes, tocar una barra, filtrar cada categoría del ADN, revisar sugerencias con límites de kcal/macros y registrar un peso con objetivo Mantener.
 - Pendiente de aclarar en otra sesión: obtener o agregar el SQL de creación inicial de `comidas` y `comida_ingredientes` para documentar su esquema desplegado completo.
 
 ## Cómo probar la etapa anterior
@@ -103,5 +106,6 @@ Etapa 8 — Progreso y cierre de brecha; implementación en curso, validación m
 ## Cómo probar la etapa actual
 
 1. Cambiar entre Semana y Mes y tocar barras para ver fecha, kcal y diferencia vs. meta.
-2. Revisar el ADN alimentario y filtrar sus categorías.
-3. Verificar que cada sugerencia de cierre de brecha tenga cantidad, proteína y kcal, y respete calorías, grasas y macros restantes.
+2. Revisar que el ADN excluya condimentos/aceites y que cada filtro muestre ingredientes de su categoría.
+3. Verificar que las sugerencias de Hoy/Progreso incluyan porciones concretas y no rebasen kcal, grasas ni macros restantes; revisar también el caso sin opción viable.
+4. Con objetivo Mantener, registrar un peso y comprobar que aparece en la gráfica de 30 días.

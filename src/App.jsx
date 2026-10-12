@@ -7,8 +7,9 @@ import { ProfileView } from "./components/ProfileView";
 import { agruparPorDia, fechaLocalDia, formatoDia } from "./lib/date";
 import { calcularObjetivosNutricionales } from "./lib/metabolismo";
 import { actualizarComida, crearComida, eliminarComida, obtenerComidas } from "./services/comidas";
-import { obtenerPerfilActivo, obtenerHistorialPesos } from "./services/perfil";
+import { obtenerPerfilActivo, obtenerHistorialPesos, registrarPeso } from "./services/perfil";
 import { obtenerModeloSeleccionado, guardarModeloSeleccionado } from "./services/gemini";
+import { analizarProgreso } from "./lib/progresoIntelligence";
 import "./App.css";
 
 const diaIso = (fecha) => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
@@ -84,6 +85,17 @@ export default function DiarioComidas() {
     }
   }
 
+  async function registrarPesoProgreso({ pesoKg, fecha }) {
+    try {
+      await registrarPeso({ perfilId: perfil?.id, pesoKg, fecha });
+      await recargarPesos();
+      setPerfil((actual) => ({ ...actual, peso_actual: Number(pesoKg) }));
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }
+
   // Cálculo dinámico del peso actual y metas metabólicas
   const pesoActual = useMemo(() => {
     return historialPesos[0]?.peso_kg || perfil?.peso_actual || 75;
@@ -98,6 +110,8 @@ export default function DiarioComidas() {
       grasas: calc.grasas
     };
   }, [perfil, pesoActual]);
+
+  const cierreBrechaHoy = useMemo(() => analizarProgreso({ comidas, objetivos, perfil: perfil || {}, historialPesos }).sugerenciasBrecha, [comidas, objetivos, perfil, historialPesos]);
 
   const comidasFrecuentes = useMemo(() => {
     const grupos = new Map();
@@ -281,10 +295,10 @@ export default function DiarioComidas() {
         <header className="topbar">
           <div>
             <p>
-              {vista === "diario" ? etiquetaDia : vista === "historial" ? "Todos tus registros" : vista === "perfil" ? "Ajustes y métricas" : vista === "calendario" ? "Registro diario" : "Tu evolución"}
+              {vista === "diario" ? etiquetaDia : vista === "historial" ? "Todos tus registros" : vista === "perfil" ? "Ajustes y métricas" : vista === "calendario" ? "Registro diario" : vista === "panel" ? "Evolución y hábitos" : "Tu evolución"}
             </p>
             <h1>
-              {vista === "diario" ? "Tu día" : vista === "historial" ? "Historial" : vista === "perfil" ? "Perfil" : vista === "calendario" ? "Calendario" : "Health insights"}
+              {vista === "diario" ? "Tu día" : vista === "historial" ? "Historial" : vista === "perfil" ? "Perfil" : vista === "calendario" ? "Calendario" : "Progreso"}
               {vista === "diario" && diaSeleccionado !== hoy && (
                 <button className="today-pill" onClick={() => setDiaSeleccionado(hoy)} aria-label="Volver a hoy">← Hoy</button>
               )}
@@ -367,6 +381,7 @@ export default function DiarioComidas() {
             perfil={perfil || {}}
             historialPesos={historialPesos}
             onVerHistorial={() => setVista("historial")}
+            onRegistrarPeso={registrarPesoProgreso}
           />
         ) : vista === "historial" ? (
           <section className="history-list">
@@ -405,8 +420,8 @@ export default function DiarioComidas() {
               </div>
             </section>
 
-            {diaSeleccionado === hoy && totales.proteinas < objetivos.proteinas * 0.85 && (
-              <section className="gap-today-card"><strong>Cierre de brecha</strong><p>Te faltan {Math.round(objetivos.proteinas - totales.proteinas)} g de proteína para tu objetivo. Tus alimentos habituales con proteína pueden ayudarte a completarlo.</p></section>
+            {diaSeleccionado === hoy && objetivos.proteinas - totales.proteinas > 15 && (
+              <section className="gap-today-card"><strong>Cierre de brecha</strong>{cierreBrechaHoy.length ? <div className="gap-today-options">{cierreBrechaHoy.map((sugerencia, index) => <p key={index}><b>{sugerencia.titulo}</b><span>+{sugerencia.proteinas} g proteína · {sugerencia.calorias} kcal · {sugerencia.grasas} g grasa · {sugerencia.carbohidratos} g carbos</span></p>)}</div> : <p>Ya estás cerca de tu meta. No hay una opción habitual que quepa dentro de las kcal, grasas y macros que te quedan.</p>}</section>
             )}
 
             <section className="meal-section">

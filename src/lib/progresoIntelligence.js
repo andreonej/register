@@ -238,8 +238,7 @@ export function analizarProgreso({
   const listaIngredientesTop = Object.values(conteoIngredientes)
     .filter((ing) => !noMostrarEnRanking(ing.nombreNorm))
     .map((ing) => ({ ...ing, categoria: categorizarIngrediente(ing.nombreNorm) }))
-    .sort((a, b) => b.veces - a.veces || b.caloriasTotales - a.caloriasTotales)
-    .slice(0, 10);
+    .sort((a, b) => b.veces - a.veces || b.caloriasTotales - a.caloriasTotales);
 
   // Diversidad de plantas/ingredientes en los últimos 7 días
   const ingredientesSemana = new Set(
@@ -266,7 +265,7 @@ export function analizarProgreso({
       kcal100: ing.caloriasTotales / ing.pesosTotales * 100,
       grasa100: ing.grasasTotales / ing.pesosTotales * 100,
       veces: ing.veces
-    })).filter((ing) => Number.isFinite(ing.proteina100) && ing.proteina100 > 0 && ing.kcal100 >= 0 && ing.grasa100 >= 0)
+    })).filter((ing) => Number.isFinite(ing.proteina100) && ing.proteina100 > 0 && ing.kcal100 > 0 && ing.grasa100 >= 0)
       .sort((a, b) => b.proteina100 - a.proteina100 || b.veces - a.veces);
     const dimensionar = (candidato, objetivoProteina) => {
       const limites = [objetivoProteina / candidato.proteina100 * 100, 250];
@@ -274,8 +273,8 @@ export function analizarProgreso({
       if (candidato.grasa100 > 0) limites.push(grasasRestantesHoy / candidato.grasa100 * 100);
       if (candidato.carbo100 > 0) limites.push(carbohidratosRestantesHoy / candidato.carbo100 * 100);
       const gramos = Math.floor(Math.min(...limites));
-      if (gramos < 10) return null;
-      return { nombre: candidato.nombre, gramos, calorias: Math.round(candidato.kcal100 * gramos / 100), proteinas: Math.round(candidato.proteina100 * gramos / 100), grasas: Math.round(candidato.grasa100 * gramos / 100), carbohidratos: Math.round((candidato.carbo100 || 0) * gramos / 100) };
+      if (gramos < 20) return null;
+      return { nombre: candidato.nombre, gramos, calorias: Math.floor(candidato.kcal100 * gramos / 100), proteinas: Math.floor(candidato.proteina100 * gramos / 100), grasas: Math.floor(candidato.grasa100 * gramos / 100), carbohidratos: Math.floor((candidato.carbo100 || 0) * gramos / 100) };
     };
     candidatos.forEach((candidato) => {
       const porcion = dimensionar(candidato, proteinasFaltantesHoy);
