@@ -2,7 +2,7 @@
 
 ## Etapa actual
 
-Etapa 5 — Describir con inferencia y fecha; implementación lista, validación manual pendiente.
+Etapa 6 — Entrada rápida y atajos; en curso.
 
 ## Hecho
 
@@ -32,6 +32,7 @@ Etapa 5 — Describir con inferencia y fecha; implementación lista, validación
 - El modo Describir incluye Ahora, Hace 1 h, Esta mañana, Mediodía, Anoche y fecha/hora elegible. La fecha local elegida se fuerza en la respuesta y se persiste con la comida.
 - El botón Analizar queda sticky en la vista de escritura; el cajón sigue el viewport visible/teclado. El campo conserva textarea nativo para dictado y usa tipografía de la app.
 - El flujo normal ofrece solo Foto y Describir; no hay pestaña Manual. Los ingredientes inferidos se conservan usando el indicador de supuesto existente, sin cambio de esquema.
+- Etapa 5 validada manualmente por el usuario; confirmó que las pruebas salieron bien.
 
 ## Decisiones
 
@@ -64,14 +65,13 @@ Etapa 5 — Describir con inferencia y fecha; implementación lista, validación
 - Verificación técnica etapa 2: `npm run build` correcto; servidor Vite responde HTTP 200. El usuario confirmó que funcionó perfectamente.
 - Verificación técnica etapa 3: `npm run build` correcto y prueba manual confirmada por el usuario. Consulta REST posterior confirmó que `factor_porcion` existe en Supabase.
 - Verificación técnica etapa 4: `npm run build` y `git diff --check` correctos. REST confirmó presentes `cantidad`, `alias` y `confianza`; pruebas manuales confirmadas por el usuario.
-- Verificación técnica etapa 5: `npm run build` y `git diff --check` correctos. No hay navegador móvil disponible aquí, así que falta validar visualmente teclado, dictado y selecciones rápidas.
-- Siguiente paso exacto: probar “sánguche de miga triple”, una descripción con gramos exactos, seleccionar Anoche o una fecha anterior y guardar; verificar fecha del registro, teclado/dictado, y que solo aparezcan Foto y Describir.
+- Verificación técnica etapa 5: `npm run build` y `git diff --check` correctos; el usuario confirmó validación manual exitosa.
+- Siguiente paso exacto: crear el menú del botón +, iniciar cámara con análisis automático, agregar atajos por frecuencia/franja y repetir una comida guardada sin llamar al modelo.
 - Pendiente de aclarar en otra sesión: obtener o agregar el SQL de creación inicial de `comidas` y `comida_ingredientes` para documentar su esquema desplegado completo.
 
 ## Cómo probar la etapa actual
 
-1. Describir “comí un sánguche de miga triple” y comprobar desglose estimado y origen indicado/inferido.
-2. Describir una comida con gramos exactos; confirmar que se respeten y no se agreguen supuestos sobre esas cantidades.
-3. Seleccionar “Anoche” o “Elegir fecha y hora”, guardar y confirmar que aparece en el día seleccionado.
-4. En teléfono, abrir el teclado y verificar que el botón Analizar queda visible y que el dictado del teclado funciona.
-5. Confirmar que solo existen las pestañas Foto y Describir.
+1. Pulsar + y confirmar que aparecen Cámara, Galería, Describir y Repetir reciente.
+2. Seleccionar Cámara, tomar una foto y confirmar que el análisis empieza sin otro toque.
+3. Usar un atajo frecuente y confirmar que guarda al instante sin llamar al modelo; probar también Ajustar porción.
+4. Elegir Repetir reciente y confirmar que crea un registro nuevo sin análisis.
