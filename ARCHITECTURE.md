@@ -17,7 +17,7 @@
 ## Flujos y datos
 
 1. `App.jsx` llama a `obtenerComidas()` y `obtenerPerfilActivo()` al iniciar. Los totales de Hoy se suman desde `comidas_del_dia` en memoria.
-2. El botón `+` abre `NewMealDrawer`. Este procesa la imagen, invoca `analizarFotoComida()` o `analizarTextoComida()` en `services/gemini.js` y ofrece guardar el resultado mediante `guardarRegistro()` → `crearComida()`.
+2. El botón `+` abre `NewMealDrawer`. Este procesa la imagen, invoca `analizarFotoComida()` o `analizarTextoComida()` en `services/gemini.js` y ofrece guardar el resultado mediante `guardarRegistro()` → `crearComida()`. El modo Describir permite elegir una fecha/hora local; el modelo devuelve ingredientes con origen usuario/inferido y el indicador inferido se conserva en `supuesto`.
 3. Progreso recibe comidas, objetivos y perfil en `AnalyticsPanel.jsx`; sus cálculos vienen de `analizarProgreso()` en `lib/progresoIntelligence.js`.
 
 ## Persistencia conocida por el código

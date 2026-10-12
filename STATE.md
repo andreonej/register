@@ -2,7 +2,7 @@
 
 ## Etapa actual
 
-Etapa 4 — Esquema del análisis; implementación lista, migración y validación manual pendientes.
+Etapa 5 — Describir con inferencia y fecha; implementación lista, validación manual pendiente.
 
 ## Hecho
 
@@ -27,12 +27,18 @@ Etapa 4 — Esquema del análisis; implementación lista, migración y validaci�
 - La pantalla muestra advertencia para ingredientes de confianza baja, permite ajustar cantidad con recálculo proporcional y conserva cantidad al guardar/abrir.
 - Los chips de corrección salen de las sugerencias del análisis, no de una lista genérica de preparación.
 - La confianza general usa el campo ya existente `nivel_confianza`; `supabase_modelo_setup.sql` agrega cantidad, alias y confianza por ingrediente de forma aditiva.
+- Etapa 4 validada manualmente por el usuario; confirmó que las pruebas salieron bien. La consulta REST de solo lectura confirma que los campos nuevos están presentes en Supabase.
+- Etapa 5: el prompt prioriza la descripción y cantidades del usuario, no pregunta de vuelta y marca cada ingrediente como indicado o estimado; el resultado distingue ambos orígenes.
+- El modo Describir incluye Ahora, Hace 1 h, Esta mañana, Mediodía, Anoche y fecha/hora elegible. La fecha local elegida se fuerza en la respuesta y se persiste con la comida.
+- El botón Analizar queda sticky en la vista de escritura; el cajón sigue el viewport visible/teclado. El campo conserva textarea nativo para dictado y usa tipografía de la app.
+- El flujo normal ofrece solo Foto y Describir; no hay pestaña Manual. Los ingredientes inferidos se conservan usando el indicador de supuesto existente, sin cambio de esquema.
 
 ## Decisiones
 
-- Se consultó Supabase solo mediante REST de lectura: `factor_porcion` está presente y los campos nuevos de `comida_ingredientes` aún faltan. No se insertaron datos ni se modificó la base.
+- Se consultó Supabase solo mediante REST de lectura para verificar columnas de porción y esquema del análisis. No se insertaron datos ni se modificó la base.
+- No se requiere migración nueva para la etapa 5: se reutilizan `fecha` y `supuesto` existentes.
 - Se agregó `fechaReferencia` opcional a `analizarProgreso` para poder verificar ventanas históricas de forma reproducible; en la app se usa la fecha actual.
-- La migración de fase 4 establece cantidad 1 para ingredientes antiguos, confianza NULL y alias NULL.
+- La migración de fase 4 establece cantidad 1 para ingredientes antiguos, confianza NULL y alias NULL; el usuario confirmó que ya la ejecutó y probó la fase.
 
 ## Archivos tocados
 
@@ -57,14 +63,15 @@ Etapa 4 — Esquema del análisis; implementación lista, migración y validaci�
 - Verificación etapa 1: `npm run build` correcto y servidor Vite responde HTTP 200. Caso controlado con domingo 11 en curso (355 kcal), seis días anteriores registrados y solo sábado como día de fin de semana completo: promedio 1167 kcal sin incluir las 355 kcal de hoy, estabilidad `1 / 6 · Irregular` y comparativa marcada insuficiente.
 - Verificación técnica etapa 2: `npm run build` correcto; servidor Vite responde HTTP 200. El usuario confirmó que funcionó perfectamente.
 - Verificación técnica etapa 3: `npm run build` correcto y prueba manual confirmada por el usuario. Consulta REST posterior confirmó que `factor_porcion` existe en Supabase.
-- Verificación técnica etapa 4: `npm run build` y `git diff --check` correctos. REST de solo lectura confirmó que faltan `cantidad`, `alias` y `confianza` en `comida_ingredientes`.
-- Siguiente paso exacto: ejecutar `supabase_modelo_setup.sql` en Supabase y probar con tres fotos, chips contextuales, edición de cantidad, guardado y apertura de registros viejos/nuevos.
+- Verificación técnica etapa 4: `npm run build` y `git diff --check` correctos. REST confirmó presentes `cantidad`, `alias` y `confianza`; pruebas manuales confirmadas por el usuario.
+- Verificación técnica etapa 5: `npm run build` y `git diff --check` correctos. No hay navegador móvil disponible aquí, así que falta validar visualmente teclado, dictado y selecciones rápidas.
+- Siguiente paso exacto: probar “sánguche de miga triple”, una descripción con gramos exactos, seleccionar Anoche o una fecha anterior y guardar; verificar fecha del registro, teclado/dictado, y que solo aparezcan Foto y Describir.
 - Pendiente de aclarar en otra sesión: obtener o agregar el SQL de creación inicial de `comidas` y `comida_ingredientes` para documentar su esquema desplegado completo.
 
 ## Cómo probar la etapa actual
 
-1. Ejecutar `supabase_modelo_setup.sql` en el SQL Editor de Supabase.
-2. Analizar tres platos distintos; verificar confianza general y por ingrediente, y que nombres repetidos se agrupen con cantidad.
-3. Confirmar que los chips sugeridos corresponden al plato; usar uno y volver a analizar.
-4. Ajustar cantidad desde Editar ingredientes, confirmar el recálculo y guardar.
-5. Abrir registros nuevos y anteriores para confirmar compatibilidad.
+1. Describir “comí un sánguche de miga triple” y comprobar desglose estimado y origen indicado/inferido.
+2. Describir una comida con gramos exactos; confirmar que se respeten y no se agreguen supuestos sobre esas cantidades.
+3. Seleccionar “Anoche” o “Elegir fecha y hora”, guardar y confirmar que aparece en el día seleccionado.
+4. En teléfono, abrir el teclado y verificar que el botón Analizar queda visible y que el dictado del teclado funciona.
+5. Confirmar que solo existen las pestañas Foto y Describir.
