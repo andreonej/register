@@ -1,4 +1,6 @@
-import { geminiApiKey, isGeminiConfigured } from "../config";
+import { isGeminiConfigured } from "../config";
+
+const PROXY_GEMINI_URL = "/.netlify/functions/gemini";
 
 export function obtenerFechaActualLocal() {
   const ahora = new Date();
@@ -341,12 +343,11 @@ export async function analizarFotoComida({
   signal
 }) {
   if (!isGeminiConfigured) {
-    throw new Error("No se ha configurado la API Key de Gemini en el archivo .env (VITE_API_GEMINI).");
+    throw new Error("El servicio de análisis con IA se encuentra temporalmente desactivado.");
   }
 
   const modeloActivo = modelo || obtenerModeloSeleccionado();
   const fechaReferencia = obtenerFechaActualLocal();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloActivo}:generateContent?key=${geminiApiKey}`;
 
   let promptUsuario = `Analiza esta comida según tus instrucciones. Fecha actual de registro: "${fechaReferencia}".`;
   if (detallesAdicionales && detallesAdicionales.trim()) {
@@ -361,7 +362,7 @@ export async function analizarFotoComida({
     contents: [
       {
         parts: [
-          {
+        {
             inlineData: {
               mimeType,
               data: base64Data
@@ -379,13 +380,16 @@ export async function analizarFotoComida({
     }
   };
 
-  const response = await fetch(url, {
+  const response = await fetch(PROXY_GEMINI_URL, {
     method: "POST",
     signal,
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      modelo: modeloActivo,
+      payload
+    })
   });
 
   return procesarRespuestaGemini(response, modeloActivo, fechaReferencia);
@@ -406,7 +410,7 @@ export async function analizarTextoComida({
   modelo = null
 }) {
   if (!isGeminiConfigured) {
-    throw new Error("No se ha configurado la API Key de Gemini en el archivo .env (VITE_API_GEMINI).");
+    throw new Error("El servicio de análisis con IA se encuentra temporalmente desactivado.");
   }
 
   if (!descripcion || !descripcion.trim()) {
@@ -415,7 +419,6 @@ export async function analizarTextoComida({
 
   const modeloActivo = modelo || obtenerModeloSeleccionado();
   const fechaReferencia = fechaComida || obtenerFechaActualLocal();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modeloActivo}:generateContent?key=${geminiApiKey}`;
 
   let promptUsuario = `Estima esta comida descrita por el usuario. No hagas preguntas. Respeta todo nombre, cantidad, unidad o gramo explícito; infiere solo lo que no se indicó.\nFecha y hora elegidas por el usuario para registrar esta comida: "${fechaReferencia}". Usa exactamente este valor en el campo fecha; no uses la hora actual.\n\nDESCRIPCIÓN DE LO CONSUMIDO:\n"${descripcion.trim()}"`;
   if (detallesAdicionales && detallesAdicionales.trim()) {
@@ -442,12 +445,15 @@ export async function analizarTextoComida({
     }
   };
 
-  const response = await fetch(url, {
+  const response = await fetch(PROXY_GEMINI_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      modelo: modeloActivo,
+      payload
+    })
   });
 
   return procesarRespuestaGemini(response, modeloActivo, fechaReferencia, fechaReferencia, true);

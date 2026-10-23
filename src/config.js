@@ -12,6 +12,6 @@ export const supabaseHeaders = {
 export const supabaseApiUrl = supabaseUrl ? `${supabaseUrl}/rest/v1` : "";
 export const supabaseStorageUrl = supabaseUrl ? `${supabaseUrl}/storage/v1` : "";
 
-const rawGeminiKey = import.meta.env.VITE_API_GEMINI || "";
-export const geminiApiKey = rawGeminiKey.trim();
-export const isGeminiConfigured = Boolean(geminiApiKey);
+// La inferencia de Gemini se procesa de forma segura a través del proxy de Netlify Functions.
+// La API Key ya no se incluye en el bundle cliente.
+export const isGeminiConfigured = import.meta.env.VITE_DISABLE_AI !== "true";
