@@ -38,12 +38,20 @@ export default async (req, context) => {
     );
   }
 
-  const apiKey = (process.env.GEMINI_API_KEY || process.env.VITE_API_GEMINI || "").trim();
+  let apiKey = (process.env.GEMINI_API_KEY || process.env.VITE_API_GEMINI || "").trim();
+  // Limpiar comillas accidentales ("..." o '...'), espacios o prefijos tipo "GEMINI_API_KEY=..."
+  if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'")) || (apiKey.startsWith("`") && apiKey.endsWith("`"))) {
+    apiKey = apiKey.slice(1, -1).trim();
+  }
+  if (apiKey.includes("=")) {
+    apiKey = apiKey.split("=").pop().trim();
+  }
+
   if (!apiKey) {
     return new Response(
       JSON.stringify({
         error: {
-          message: "No se ha configurado la variable de entorno GEMINI_API_KEY en Netlify."
+          message: "No se ha configurado la variable de entorno GEMINI_API_KEY en Netlify (Site configuration > Environment variables)."
         }
       }),
       {
@@ -93,9 +101,32 @@ export default async (req, context) => {
       body: JSON.stringify(payload)
     });
 
-    const data = await geminiRes.text();
+    const dataText = await geminiRes.text();
+    let data;
+    try {
+      data = JSON.parse(dataText);
+    } catch {
+      data = { raw: dataText };
+    }
 
-    return new Response(data, {
+    if (!geminiRes.ok) {
+      const msg = data?.error?.message || "";
+      if (msg.includes("API key not valid") || msg.includes("API_KEY_INVALID")) {
+        const masked = apiKey.length >= 10
+          ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)} (${apiKey.length} caracteres)`
+          : `valor corto (${apiKey.length} carac.)`;
+        return new Response(
+          JSON.stringify({
+            error: {
+              message: `La API Key de Gemini configurada en Netlify fue rechazada por Google [${masked}]. Verificá que la clave en Netlify no tenga comillas ni espacios y que en Google Cloud no tenga restricción por 'HTTP Referrer'.`
+            }
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    return new Response(JSON.stringify(data), {
       status: geminiRes.status,
       headers: {
         "Content-Type": "application/json"

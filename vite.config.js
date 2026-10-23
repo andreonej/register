@@ -41,7 +41,13 @@ function netlifyFunctionsDevPlugin() {
             return
           }
 
-          const apiKey = (env.GEMINI_API_KEY || env.VITE_API_GEMINI || process.env.GEMINI_API_KEY || '').trim()
+          let apiKey = (env.GEMINI_API_KEY || env.VITE_API_GEMINI || process.env.GEMINI_API_KEY || '').trim()
+          if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'")) || (apiKey.startsWith("`") && apiKey.endsWith("`"))) {
+            apiKey = apiKey.slice(1, -1).trim()
+          }
+          if (apiKey.includes('=')) {
+            apiKey = apiKey.split('=').pop().trim()
+          }
           if (!apiKey) {
             res.statusCode = 500
             res.setHeader('Content-Type', 'application/json')
